@@ -1,0 +1,37 @@
+{
+  "name": "demo-ui-monorepo",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "dev": "npm run --prefix packages/server-core dev",
+    "serve:app:http": "MONOREPO_UI_DIR=apps/agent-http-app npm run --prefix packages/server-core dev",
+    "serve:app:mcp": "MONOREPO_UI_DIR=apps/agent-mcp-app npm run --prefix packages/server-core dev",
+    "start": "node packages/server-core/dist/index.js",
+    "build": "npm run -ws build",
+    "clean": "npm run -ws clean || true",
+    "typecheck": "npm run -ws typecheck",
+    "lint": "npm run -ws lint || true"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "devDependencies": {
+    "tsx": "^4.19.1",
+    "@types/node": "^24.3.1",
+    "@types/react": "^19.1.12",
+    "@types/react-dom": "^19.1.9",
+    "eslint": "^9.35.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-import": "^2.32.0",
+    "prettier": "^3.6.2",
+    "rimraf": "^6.0.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.2"
+  }
+}
