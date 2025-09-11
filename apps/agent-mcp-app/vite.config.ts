@@ -5,11 +5,10 @@ import path from "path";
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  base: "/mcp-agent/",
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "../../packages/ui-core/src"),
-      react: path.resolve(__dirname, "node_modules/react"),
-      "react-dom": path.resolve(__dirname, "node_modules/react-dom"),
     },
     dedupe: ["react", "react-dom"],
   },
@@ -17,7 +16,11 @@ export default defineConfig({
     include: ["react", "react-dom"],
   },
   css: {
-    postcss: path.resolve(__dirname, "./postcss.config.cjs"),
+    postcss: path.resolve(__dirname, "./postcss.config.js"),
   },
-  server: { port: 3000, strictPort: true },
+  server: {
+    port: 3000,
+    strictPort: true,
+    fs: { allow: ["..", path.resolve(__dirname, "../../packages/ui-core")] },
+  },
 });

@@ -36,32 +36,101 @@ export function createServer(): express.Express {
     res.send(body);
   });
 
-  // Resolve monorepo root and serve UI (dev via Vite, prod via dist)
+  // Resolve monorepo root and app directories
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
   const repoRoot = path.resolve(__dirname, "../../..");
-  const uiDirFromEnv = process.env.MONOREPO_UI_DIR || "apps/agent-http-app";
-  const appDir = path.isAbsolute(uiDirFromEnv)
-    ? uiDirFromEnv
-    : path.resolve(repoRoot, uiDirFromEnv);
+  const httpAppDir = path.resolve(repoRoot, "apps/agent-http-app");
+  const mcpAppDir = path.resolve(repoRoot, "apps/agent-mcp-app");
+  const httpBase = "/simple-agent";
+  const mcpBase = "/mcp-agent";
+
+  // Minimal landing page at /
+  const publicDir = path.resolve(__dirname, "../public");
+  const landingHtml = path.resolve(publicDir, "index.html");
+  if (fs.existsSync(publicDir)) {
+    app.use(express.static(publicDir));
+  }
+  app.get(["/", ""], (_req: Request, res: Response) => {
+    if (fs.existsSync(landingHtml)) {
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.send(fs.readFileSync(landingHtml, "utf-8"));
+      return;
+    }
+    res
+      .status(200)
+      .send(
+        '<html><head><meta charset="utf-8"><title>Agents</title></head><body><a href="' +
+          httpBase +
+          '/">Simple Agent</a> · <a href="' +
+          mcpBase +
+          '/">MCP Agent</a></body></html>'
+      );
+  });
 
   if (process.env.NODE_ENV !== "production") {
-    // Dev: Vite middleware for HMR and sourcemaps
+    // Dev: Vite middleware for both apps mounted under subpaths
     (async () => {
       const { createServer: createViteServer } = await import("vite");
-      process.env.TAILWIND_CONFIG = path.resolve(appDir, "tailwind.config.ts");
-      const vite = await createViteServer({
-        root: appDir,
-        configFile: path.resolve(appDir, "vite.config.ts"),
-        server: { middlewareMode: true },
+
+      // Simple Agent (HTTP)
+      const viteHttp = await createViteServer({
+        root: httpAppDir,
+        configFile: path.resolve(httpAppDir, "vite.config.ts"),
+        base: `${httpBase}/`,
+        server: { middlewareMode: true, hmr: { port: 24678 } },
         appType: "custom",
       } as any);
-      app.use(vite.middlewares);
-      app.use("*", async (req, res, next) => {
+      app.use(httpBase, viteHttp.middlewares);
+      const httpIndexPath = path.resolve(httpAppDir, "index.html");
+      app.get([httpBase, `${httpBase}/`], async (_req, res, next) => {
         try {
-          const templatePath = path.resolve(appDir, "index.html");
-          let template = await fs.promises.readFile(templatePath, "utf-8");
-          template = await vite.transformIndexHtml(req.originalUrl, template);
+          let template = await fs.promises.readFile(httpIndexPath, "utf-8");
+          template = await viteHttp.transformIndexHtml(
+            `${httpBase}/`,
+            template
+          );
+          res.status(200).set({ "Content-Type": "text/html" }).end(template);
+        } catch (e) {
+          next(e);
+        }
+      });
+      app.get(`${httpBase}/*`, async (_req, res, next) => {
+        try {
+          let template = await fs.promises.readFile(httpIndexPath, "utf-8");
+          template = await viteHttp.transformIndexHtml(
+            `${httpBase}/`,
+            template
+          );
+          res.status(200).set({ "Content-Type": "text/html" }).end(template);
+        } catch (e) {
+          next(e);
+        }
+      });
+
+      // MCP Agent
+      const viteMcp = await createViteServer({
+        root: mcpAppDir,
+        configFile: path.resolve(mcpAppDir, "vite.config.ts"),
+        base: `${mcpBase}/`,
+        server: { middlewareMode: true, hmr: { port: 24679 } },
+        appType: "custom",
+      } as any);
+      app.use(mcpBase, viteMcp.middlewares);
+      const mcpIndexPath = path.resolve(mcpAppDir, "index.html");
+      app.get([mcpBase, `${mcpBase}/`], async (_req, res, next) => {
+        try {
+          let template = await fs.promises.readFile(mcpIndexPath, "utf-8");
+          template = await viteMcp.transformIndexHtml(`${mcpBase}/`, template);
+          res.status(200).set({ "Content-Type": "text/html" }).end(template);
+        } catch (e) {
+          next(e);
+        }
+      });
+      app.get(`${mcpBase}/*`, async (_req, res, next) => {
+        try {
+          let template = await fs.promises.readFile(mcpIndexPath, "utf-8");
+          template = await viteMcp.transformIndexHtml(`${mcpBase}/`, template);
           res.status(200).set({ "Content-Type": "text/html" }).end(template);
         } catch (e) {
           next(e);
@@ -69,17 +138,33 @@ export function createServer(): express.Express {
       });
     })();
   } else {
-    // Prod: serve built assets
-    const distDir = path.resolve(appDir, "dist");
-    const indexHtml = path.resolve(distDir, "index.html");
-    app.use(express.static(distDir));
-    app.use("*", (_req: Request, res: Response) => {
-      if (fs.existsSync(indexHtml)) {
+    // Prod: serve both built apps under their subpaths
+    const httpDistDir = path.resolve(httpAppDir, "dist");
+    const httpIndexHtml = path.resolve(httpDistDir, "index.html");
+    app.use(httpBase, express.static(httpDistDir));
+    app.get([httpBase, `${httpBase}/*`], (_req: Request, res: Response) => {
+      if (fs.existsSync(httpIndexHtml)) {
         res.setHeader("Content-Type", "text/html; charset=utf-8");
-        res.send(fs.readFileSync(indexHtml, "utf-8"));
+        res.send(fs.readFileSync(httpIndexHtml, "utf-8"));
         return;
       }
-      res.status(500).send("App not built. Please run the app build first.");
+      res
+        .status(500)
+        .send("Simple Agent app not built. Please run its build first.");
+    });
+
+    const mcpDistDir = path.resolve(mcpAppDir, "dist");
+    const mcpIndexHtml = path.resolve(mcpDistDir, "index.html");
+    app.use(mcpBase, express.static(mcpDistDir));
+    app.get([mcpBase, `${mcpBase}/*`], (_req: Request, res: Response) => {
+      if (fs.existsSync(mcpIndexHtml)) {
+        res.setHeader("Content-Type", "text/html; charset=utf-8");
+        res.send(fs.readFileSync(mcpIndexHtml, "utf-8"));
+        return;
+      }
+      res
+        .status(500)
+        .send("MCP Agent app not built. Please run its build first.");
     });
   }
 

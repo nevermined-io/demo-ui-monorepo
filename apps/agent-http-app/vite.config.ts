@@ -5,11 +5,10 @@ import path from "path";
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  base: "/simple-agent/",
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "../../packages/ui-core/src"),
-      react: path.resolve(__dirname, "node_modules/react"),
-      "react-dom": path.resolve(__dirname, "node_modules/react-dom"),
     },
     dedupe: ["react", "react-dom"],
   },
@@ -19,5 +18,9 @@ export default defineConfig({
   css: {
     postcss: path.resolve(__dirname, "./postcss.config.cjs"),
   },
-  server: { port: 3000, strictPort: true },
+  server: {
+    port: 3000,
+    strictPort: true,
+    fs: { allow: ["..", path.resolve(__dirname, "../../packages/ui-core")] },
+  },
 });

@@ -1,4 +1,4 @@
-import "@/index.css";
+import "./index.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "@/lib/theme-context";
 import { ChatProvider } from "@/lib/chat-context";
