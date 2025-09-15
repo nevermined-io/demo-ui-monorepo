@@ -9,6 +9,10 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "../../packages/ui-core/src"),
+      "@app/agent-client": path.resolve(
+        __dirname,
+        "../../packages/agent-client/src"
+      ),
     },
     dedupe: ["react", "react-dom"],
   },
@@ -21,6 +25,12 @@ export default defineConfig({
   server: {
     port: 3000,
     strictPort: true,
-    fs: { allow: ["..", path.resolve(__dirname, "../../packages/ui-core")] },
+    fs: {
+      allow: [
+        "..",
+        path.resolve(__dirname, "../../packages/ui-core"),
+        path.resolve(__dirname, "../../packages/agent-client"),
+      ],
+    },
   },
 });
