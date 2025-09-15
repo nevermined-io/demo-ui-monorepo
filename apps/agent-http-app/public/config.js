@@ -1,1 +1,1 @@
-window.__RUNTIME_CONFIG__ = { transport: 'http' };
+window.__RUNTIME_CONFIG__ = { transport: 'http', appTitle: 'Financial Advisor AI' };

@@ -2,11 +2,18 @@ export type RuntimeConfig = {
   transport: "http" | "mcp" | "a2a";
   environment?: string;
   agentId?: string;
+  /**
+   * Title to display in the UI header. Provided by each app at runtime.
+   */
+  appTitle?: string;
 };
 
 /**
  * Loads runtime configuration exposed by the server.
  * Falls back to Vite env when available.
+ *
+ * Includes optional `appTitle`, which allows each app to inject a UI title
+ * without rebuilding shared UI packages.
  */
 export function loadRuntimeConfig(): RuntimeConfig {
   const fromWindow = (globalThis as any).__RUNTIME_CONFIG__ || {};
@@ -16,6 +23,7 @@ export function loadRuntimeConfig(): RuntimeConfig {
     transport,
     environment: fromWindow.environment || fromVite.VITE_NVM_ENVIRONMENT,
     agentId: fromWindow.agentId || fromVite.VITE_AGENT_ID,
+    appTitle: fromWindow.appTitle || fromVite.VITE_APP_TITLE,
   } as RuntimeConfig;
 }
 

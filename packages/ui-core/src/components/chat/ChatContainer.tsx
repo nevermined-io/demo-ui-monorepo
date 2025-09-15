@@ -27,6 +27,7 @@ import Logo from "./Logo";
 import { Badge } from "@/components/ui/badge";
 import { useUserState } from "@/lib/user-state-context";
 import SettingsModal from "@/components/ui/settings-modal";
+import { loadRuntimeConfig } from "@app/config";
 import {
   Dialog,
   DialogContent,
@@ -53,6 +54,30 @@ export default function ChatContainer() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const hasApiKey = !!apiKey;
+
+  // Read title from runtime configuration; fallback to a default.
+  const appTitle = loadRuntimeConfig().appTitle || "Financial Advisor AI";
+
+  // Prepare help modal copy based on transport (http vs mcp)
+  const { transport } = loadRuntimeConfig();
+  const isMcp = transport === "mcp";
+  const helpTitle = isMcp
+    ? "About the Weather Agent"
+    : "About this Financial Advisor";
+  const helpIntro = isMcp
+    ? "Welcome to the Nevermined Weather Agent."
+    : "Welcome to the Nevermined Financial Advisor AI.";
+  const helpCapabilities = isMcp
+    ? "This AI provides real-time weather data, short/medium-range forecasts, alerts and safety guidance, and practical recommendations for travel and outdoor activities. Ask about current conditions, rain probability, wind, temperatures, and severe weather."
+    : "This AI financial advisor provides real-time market data, investment analysis, and financial advice. Ask about cryptocurrency prices, stock market performance, investment opportunities, and get professional financial guidance.";
+  const helpCredits = isMcp
+    ? "Each weather query consumes credits from your Nevermined account. You can see your current credits at the top. If you run out of credits, you can purchase more directly from the chat."
+    : "Each financial analysis consumes credits from your Nevermined account. You can see your current credits at the top. If you run out of credits, you can purchase more directly from the chat.";
+  const helpDisclaimer = isMcp
+    ? "This AI provides general weather information and advice. For emergencies or life‑threatening conditions, always follow official alerts and instructions from local authorities."
+    : "This AI provides general financial information and analysis. It is not personalized financial advice. Always consult with a qualified financial advisor before making investment decisions.";
+  const helpPrivacy =
+    "Your API Key is never sent to third parties; it is only used to authenticate you with Nevermined.";
 
   // Removed auto-open settings modal on missing API Key
 
@@ -116,17 +141,14 @@ export default function ChatContainer() {
       <Dialog open={helpOpen} onOpenChange={setHelpOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>About this Financial Advisor</DialogTitle>
+            <DialogTitle>{helpTitle}</DialogTitle>
             <DialogDescription>
-              Welcome to the Nevermined Financial Advisor AI.
+              {helpIntro}
               <br />
               <br />
               <b>What can you do here?</b>
               <br />
-              This AI financial advisor provides real-time market data,
-              investment analysis, and financial advice. Ask about
-              cryptocurrency prices, stock market performance, investment
-              opportunities, and get professional financial guidance.
+              {helpCapabilities}
               <br />
               <br />
               <b>How does the API Key work?</b>
@@ -139,22 +161,17 @@ export default function ChatContainer() {
               <br />
               <b>What are credits?</b>
               <br />
-              Each financial analysis consumes credits from your Nevermined
-              account. You can see your current credits at the top. If you run
-              out of credits, you can purchase more directly from the chat.
+              {helpCredits}
               <br />
               <br />
               <b>Important Disclaimer</b>
               <br />
-              This AI provides general financial information and analysis. It is
-              not personalized financial advice. Always consult with a qualified
-              financial advisor before making investment decisions.
+              {helpDisclaimer}
               <br />
               <br />
               <b>Privacy</b>
               <br />
-              Your API Key is never sent to third parties; it is only used to
-              authenticate you with Nevermined.
+              {helpPrivacy}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -218,7 +235,7 @@ export default function ChatContainer() {
               </Button>
             )}
             <div className="text-lg font-semibold" style={{ color: "#0D3F48" }}>
-              Financial Advisor AI
+              {appTitle}
             </div>
           </div>
           <div className="flex items-center gap-4">
