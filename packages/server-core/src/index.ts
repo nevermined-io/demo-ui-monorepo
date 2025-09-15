@@ -45,33 +45,40 @@ export function createServer(): express.Express {
   const httpBase = "/simple-agent";
   const mcpBase = "/mcp-agent";
 
-  // Minimal landing page at /
+  // Minimal landing page at /, served via Vite in dev and static in prod
   const publicDir = path.resolve(__dirname, "../public");
-  const landingHtml = path.resolve(publicDir, "index.html");
   if (fs.existsSync(publicDir)) {
-    app.use(express.static(publicDir));
+    // Do not auto-serve index.html from public at '/'; landing is handled separately
+    app.use(express.static(publicDir, { index: false } as any));
   }
-  app.get(["/", ""], (_req: Request, res: Response) => {
-    if (fs.existsSync(landingHtml)) {
-      res.setHeader("Content-Type", "text/html; charset=utf-8");
-      res.send(fs.readFileSync(landingHtml, "utf-8"));
-      return;
-    }
-    res
-      .status(200)
-      .send(
-        '<html><head><meta charset="utf-8"><title>Agents</title></head><body><a href="' +
-          httpBase +
-          '/">Simple Agent</a> · <a href="' +
-          mcpBase +
-          '/">MCP Agent</a></body></html>'
-      );
-  });
+  const landingAppDir = path.resolve(__dirname, "../../landing-app");
+  const landingDistDir = path.resolve(landingAppDir, "dist");
+  const landingIndexHtml = path.resolve(landingDistDir, "index.html");
 
   if (process.env.NODE_ENV !== "production") {
     // Dev: Vite middleware for both apps mounted under subpaths
     (async () => {
       const { createServer: createViteServer } = await import("vite");
+      // Landing app via Vite middleware
+      if (fs.existsSync(landingAppDir)) {
+        const viteLanding = await createViteServer({
+          root: landingAppDir,
+          configFile: false,
+          server: { middlewareMode: true, hmr: { port: 24677 } },
+          appType: "custom",
+        } as any);
+        app.use(viteLanding.middlewares);
+        const indexPath = path.resolve(landingAppDir, "index.html");
+        app.get(["/", ""], async (_req, res, next) => {
+          try {
+            let template = await fs.promises.readFile(indexPath, "utf-8");
+            template = await viteLanding.transformIndexHtml("/", template);
+            res.status(200).set({ "Content-Type": "text/html" }).end(template);
+          } catch (e) {
+            next(e);
+          }
+        });
+      }
 
       // Simple Agent (HTTP)
       const viteHttp = await createViteServer({
@@ -166,6 +173,20 @@ export function createServer(): express.Express {
         .status(500)
         .send("MCP Agent app not built. Please run its build first.");
     });
+    // Landing built output
+    if (fs.existsSync(landingDistDir)) {
+      app.use(express.static(landingDistDir));
+      app.get(["/", ""], (_req: Request, res: Response) => {
+        if (fs.existsSync(landingIndexHtml)) {
+          res.setHeader("Content-Type", "text/html; charset=utf-8");
+          res.send(fs.readFileSync(landingIndexHtml, "utf-8"));
+          return;
+        }
+        res
+          .status(500)
+          .send("Landing app not built. Please run its build first.");
+      });
+    }
   }
 
   return app;
