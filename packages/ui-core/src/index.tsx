@@ -126,3 +126,4 @@ export function UserStateProvider({ children }: { children: React.ReactNode }) {
 }
 
 export { HttpPaymentsClient };
+export { Button } from "./components/ui/button";

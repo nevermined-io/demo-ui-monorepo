@@ -4,12 +4,15 @@ import express, { type Express, type Request, type Response } from "express";
 import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
+import { registerRoutes } from "@app/server-api";
 
 /**
  * Create an Express server that serves the selected app (monorepo) and exposes /config.js
  */
 export function createServer(): express.Express {
   const app: Express = express();
+  // Parse JSON bodies for API endpoints
+  app.use(express.json());
 
   // Ensure root .env is loaded when running with --prefix packages/server-core
   try {
@@ -42,8 +45,10 @@ export function createServer(): express.Express {
   const repoRoot = path.resolve(__dirname, "../../..");
   const httpAppDir = path.resolve(repoRoot, "apps/agent-http-app");
   const mcpAppDir = path.resolve(repoRoot, "apps/agent-mcp-app");
+  const landingAppDir = path.resolve(repoRoot, "apps/landing-app");
   const httpBase = "/simple-agent";
   const mcpBase = "/mcp-agent";
+  const landingBase = "/";
 
   // Minimal landing page at /, served via Vite in dev and static in prod
   const publicDir = path.resolve(__dirname, "../public");
@@ -51,7 +56,6 @@ export function createServer(): express.Express {
     // Do not auto-serve index.html from public at '/'; landing is handled separately
     app.use(express.static(publicDir, { index: false } as any));
   }
-  const landingAppDir = path.resolve(__dirname, "../../landing-app");
   const landingDistDir = path.resolve(landingAppDir, "dist");
   const landingIndexHtml = path.resolve(landingDistDir, "index.html");
 
@@ -63,11 +67,32 @@ export function createServer(): express.Express {
       if (fs.existsSync(landingAppDir)) {
         const viteLanding = await createViteServer({
           root: landingAppDir,
-          configFile: false,
+          configFile: path.resolve(landingAppDir, "vite.config.ts"),
           server: { middlewareMode: true, hmr: { port: 24677 } },
           appType: "custom",
         } as any);
-        app.use(viteLanding.middlewares);
+        // Only use landing Vite middlewares for its own assets and dev endpoints
+        const landingAssetPrefixes = [
+          "/@vite",
+          "/@id",
+          "/@react-refresh",
+          "/@fs",
+          "/__vite_ping",
+          "/src",
+          "/node_modules",
+          "/assets",
+        ];
+        app.use((req, res, next) => {
+          const p = req.path || "/";
+          if (
+            p === "/" ||
+            p === "/index.html" ||
+            landingAssetPrefixes.some((prefix) => p.startsWith(prefix))
+          ) {
+            return (viteLanding.middlewares as any)(req, res, next);
+          }
+          return next();
+        });
         const indexPath = path.resolve(landingAppDir, "index.html");
         app.get(["/", ""], async (_req, res, next) => {
           try {
@@ -143,6 +168,7 @@ export function createServer(): express.Express {
           next(e);
         }
       });
+      // Note: No catch-all fallback in dev to avoid intercepting agent apps
     })();
   } else {
     // Prod: serve both built apps under their subpaths
@@ -173,21 +199,52 @@ export function createServer(): express.Express {
         .status(500)
         .send("MCP Agent app not built. Please run its build first.");
     });
-    // Landing built output
+    // Landing built output (serve static if present)
     if (fs.existsSync(landingDistDir)) {
       app.use(express.static(landingDistDir));
-      app.get(["/", ""], (_req: Request, res: Response) => {
-        if (fs.existsSync(landingIndexHtml)) {
-          res.setHeader("Content-Type", "text/html; charset=utf-8");
-          res.send(fs.readFileSync(landingIndexHtml, "utf-8"));
-          return;
-        }
-        res
-          .status(500)
-          .send("Landing app not built. Please run its build first.");
-      });
     }
+    // Always register root and fallback to show helpful error if not built
+    app.get(["/", ""], (_req: Request, res: Response) => {
+      if (fs.existsSync(landingIndexHtml)) {
+        res.setHeader("Content-Type", "text/html; charset=utf-8");
+        res.send(fs.readFileSync(landingIndexHtml, "utf-8"));
+        return;
+      }
+      res
+        .status(500)
+        .send("Landing app not built. Please run its build first.");
+    });
+    // Fallback for any non-app, non-API route to serve Landing index.html
+    app.get("*", (_req: Request, res: Response, next) => {
+      const p = _req.path || "/";
+      if (
+        p.startsWith(httpBase) ||
+        p.startsWith(mcpBase) ||
+        p.startsWith("/api") ||
+        p === "/config.js"
+      ) {
+        return next();
+      }
+      if (fs.existsSync(landingIndexHtml)) {
+        res.setHeader("Content-Type", "text/html; charset=utf-8");
+        res.send(fs.readFileSync(landingIndexHtml, "utf-8"));
+        return;
+      }
+      res
+        .status(500)
+        .send("Landing app not built. Please run its build first.");
+    });
   }
+
+  // Mount API routes shared by clients
+  (async () => {
+    try {
+      const httpServer = await registerRoutes(app);
+      // We do not call httpServer.listen() here; server-core controls the listener below.
+    } catch (e) {
+      console.error("Failed to mount API routes from @app/server-api:", e);
+    }
+  })();
 
   return app;
 }

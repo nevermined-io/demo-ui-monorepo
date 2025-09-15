@@ -21,17 +21,21 @@
     "packages/*",
     "apps/*"
   ],
+  "overrides": {
+    "tailwindcss": "^3.4.14"
+  },
   "devDependencies": {
-    "tsx": "^4.19.1",
     "@types/node": "^24.3.1",
     "@types/react": "^19.1.12",
     "@types/react-dom": "^19.1.9",
+    "@vitejs/plugin-react": "^5.0.2",
     "eslint": "^9.35.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-import": "^2.32.0",
     "prettier": "^3.6.2",
     "rimraf": "^6.0.1",
     "ts-node": "^10.9.2",
+    "tsx": "^4.19.1",
     "typescript": "^5.9.2"
   }
 }

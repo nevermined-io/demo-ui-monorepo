@@ -146,11 +146,11 @@ function SettingsModalContent({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent>
-        <DialogHeader>
+      <DialogContent className="w-full min-w-0 max-w-[95vw] sm:max-w-screen-md md:max-w-screen-lg lg:max-w-screen-xl">
+        <DialogHeader className="min-w-0">
           <DialogTitle>Settings</DialogTitle>
         </DialogHeader>
-        <div className="p-4 rounded-lg border bg-muted/40">
+        <div className="p-4 rounded-lg border bg-muted/40 w-full max-w-full min-w-0 break-words">
           <div className="mb-2">
             <div className="text-base font-medium">Nevermined API Key</div>
             <div className="text-xs text-muted-foreground">
@@ -168,12 +168,13 @@ function SettingsModalContent({
               setTouched(true);
               setError("");
             }}
+            className="w-full"
             autoFocus
             disabled={loading}
           />
           {error && <div className="text-red-600 text-sm mt-2">{error}</div>}
         </div>
-        <div className="mt-4 p-4 rounded-lg border bg-muted/40">
+        <div className="mt-4 p-4 rounded-lg border bg-muted/40 w-full max-w-full min-w-0 break-words">
           <div className="mb-2">
             <div className="text-base font-medium">Plan ID</div>
             <div className="text-xs text-muted-foreground">
@@ -189,12 +190,13 @@ function SettingsModalContent({
               setLocalPlanId(e.target.value);
               setTouched(true);
             }}
+            className="w-full"
             disabled={loading}
           />
           <div className="text-xs text-muted-foreground mt-1">
             Current plan: {planId || "(none)"}
           </div>
-          <DialogFooter className="mt-2">
+          <DialogFooter className="mt-2 min-w-0">
             <Button onClick={handleSave} disabled={!apiKey.trim() || loading}>
               {loading ? "Validating..." : "Save"}
             </Button>
@@ -250,7 +252,7 @@ function SettingsModalContent({
           )}
         </div> */}
         {/* Clear conversation history */}
-        <div className="mt-4 p-4 rounded-lg border bg-muted/40">
+        <div className="mt-4 p-4 rounded-lg border bg-muted/40 w-full max-w-full min-w-0 break-words">
           <div className="font-semibold mb-2">Conversation History</div>
           <div className="text-xs text-muted-foreground mb-4">
             Clear all saved conversations and messages from this device.
