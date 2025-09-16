@@ -7,22 +7,29 @@ import { loadPrompt } from "./promptService";
 export async function llmRouter(
   message: string,
   history: any[],
-  credits: number
+  credits: number,
+  basePromptOverride?: string
 ): Promise<{ action: string; message?: string }> {
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  const basePrompt = loadPrompt("llm-router.prompt");
-  const prompt = `${basePrompt}\n\nConversation history (for context):\n${JSON.stringify(
-    history || []
-  )}\n\nUser message:\n"${message}"\n\nUser credits: ${credits}\n\nResponse:`;
+  const basePrompt = basePromptOverride || loadPrompt("llm-router.prompt");
+  const safeHistory = Array.isArray(history) ? history : [];
+  const lastHistoryItem = safeHistory[safeHistory.length - 1];
+  const priorHistory =
+    lastHistoryItem &&
+    typeof lastHistoryItem === "object" &&
+    "content" in lastHistoryItem &&
+    (lastHistoryItem as any).content === message
+      ? safeHistory.slice(0, -1)
+      : safeHistory;
+  const systemContent = `${basePrompt}\n\nConversation history (for context):\n${JSON.stringify(priorHistory)}`;
   const completion = await openai.chat.completions.create({
     model: "gpt-4.1",
     messages: [
       {
         role: "system",
-        content:
-          "You are an assistant that decides how to process messages in a chat with a Nevermined agent. Only respond with a valid JSON with the action and a reason if applicable.",
+        content: systemContent,
       },
-      { role: "user", content: prompt },
+      { role: "user", content: message },
     ],
     max_tokens: 512,
     temperature: 0.2,

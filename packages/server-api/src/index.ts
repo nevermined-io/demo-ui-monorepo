@@ -17,7 +17,7 @@ import {
   callMcpTool,
 } from "./services/paymentsService";
 import { getCurrentBlockNumber } from "./services/blockchainService";
-import { loadAgentPrompt } from "./services/promptService";
+import { loadAgentPrompt, loadLLMRouterPrompt } from "./services/promptService";
 
 /**
  * Registers all API routes on a provided Express app and returns an http.Server.
@@ -80,7 +80,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
       }
-      const result = await llmRouter(message, history, credits);
+      const prompt = loadLLMRouterPrompt(req);
+      const result = await llmRouter(message, history, credits, prompt);
       return res.json(result);
     } catch {
       return res
@@ -126,7 +127,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!Array.isArray(history)) {
         return res.status(400).json({ error: "Missing or invalid history" });
       }
-      const agentPrompt = loadAgentPrompt();
+      const agentPrompt = loadAgentPrompt(req);
       const intent = await llmIntentSynthesizer(
         history,
         agentPrompt,
