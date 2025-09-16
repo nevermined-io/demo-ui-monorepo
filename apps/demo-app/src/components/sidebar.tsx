@@ -40,7 +40,7 @@ const Sidebar = ({ setView, view }: Props) => {
             onClick={() => setView("mcp")}
           >
             <CloudSunRain className="w-4 h-4" />
-            <span className="text-sm ">MCP Agent</span>
+            <span className="text-sm">MCP Agent</span>
           </div>
 
           <div

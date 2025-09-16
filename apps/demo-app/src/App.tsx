@@ -1,9 +1,7 @@
-import React, { useState } from "react"
-import { createRoot } from "react-dom/client"
-import "./index.css"
-import { Button } from "@app/ui-core"
 import { Github, MessageCircleMore } from "lucide-react"
 import Sidebar from "./components/sidebar"
+import { Button } from "./components/ui/button"
+import { useState } from "react"
 import SimpleAgent from "./components/simple-agent"
 import McpAgent from "./components/mcp-agent"
 import MultiAgent from "./components/multi-agent"
@@ -24,7 +22,7 @@ function App() {
       <div className="flex-1 ml-70">
         <div className="flex items-center justify-between px-6 h-22 border-b">
           <h1 className="text-2xl font-semibold text-gray-800">
-            {Title[view]} Agent - nooooo
+            {Title[view]} Agent
           </h1>
           <div className="flex items-center gap-3">
             <Button
@@ -52,8 +50,4 @@ function App() {
   )
 }
 
-createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-)
+export default App
