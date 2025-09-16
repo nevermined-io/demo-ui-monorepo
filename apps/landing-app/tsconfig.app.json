@@ -1,5 +1,5 @@
 {
-  "extends": "../ui-core/tsconfig.json",
+  "extends": "../../tsconfig.json",
   "compilerOptions": {
     "rootDir": "src",
     "outDir": "dist",
@@ -7,10 +7,9 @@
     "declarationMap": false,
     "jsx": "react-jsx",
     "baseUrl": ".",
-    "paths": {
-      "@app/ui-core": ["../../packages/ui-core/src/index.tsx"],
-      "@app/ui-core/*": ["../../packages/ui-core/src/*"]
-    }
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true
   },
   "include": ["src"]
 }
