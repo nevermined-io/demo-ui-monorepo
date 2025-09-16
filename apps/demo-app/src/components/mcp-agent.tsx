@@ -1,27 +1,26 @@
-import { Badge } from "@app/ui-core"
+import { Badge } from "./ui/badge"
 
-const SimpleAgent = () => {
+const McpAgent = () => {
   return (
     <div className="p-12">
       <div className="mb-4 flex justify-between items-center">
         <div>
           <h2 className="text-xl font-semibold text-gray-800 mb-3">
-            Example - Finance Agent
+            Example - MCP Weather Agent
           </h2>
           <p className="text-gray-600 mb-4 text-sm">
-            An AI agent that answers basic financial queries, such as balances
-            or <br /> recent activity, demonstrating simple usage-based
-            metering.
+            An agent connected through Model Context Protocol (MCP) to deliver
+            real-time weather <br /> updates and forecasts, illustrating
+            seamless pay-per-query access.
           </p>
         </div>
 
-        {/* Tags */}
-        <div className="flex flex-wrap gap-2 max-w-[250px]">
+        <div className="flex flex-wrap gap-2 max-w-[300px]">
           <Badge
             variant="secondary"
             className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100"
           >
-            Licensing
+            Fiat Payment
           </Badge>
           <Badge
             variant="secondary"
@@ -33,7 +32,7 @@ const SimpleAgent = () => {
             variant="secondary"
             className="bg-green-100 text-green-800 hover:bg-green-100"
           >
-            Simple
+            Python
           </Badge>
           <Badge
             variant="secondary"
@@ -45,43 +44,51 @@ const SimpleAgent = () => {
             variant="secondary"
             className="bg-orange-100 text-orange-800 hover:bg-orange-100"
           >
+            Mcp
+          </Badge>
+          <Badge
+            variant="secondary"
+            className="bg-orange-100 text-orange-800 hover:bg-orange-100"
+          >
             Observability
           </Badge>
         </div>
+
+        {/* Tags */}
       </div>
 
-      <img src="/simple.png" alt="" />
+      <img src="/mcp.png" alt="" />
 
       <div>
         <h3 className="text-lg font-semibold mt-4 mb-2">Step-by-step flow</h3>
         <ol className="space-y-1 text-sm">
           <li>
-            <span className="font-medium">1.</span> User opens the Finance UI
-            and requests information
+            <span className="font-medium">1.</span> User opens the Weather UI
+            and requests a forecast for a specific location
           </li>
           <li>
-            <span className="font-medium">2.</span> The system checks for a
-            subscription, and if none, user is sent to checkout
+            <span className="font-medium">2.</span> The UI verifies if the user
+            is a subscriber, and if missing, redirects to checkout
           </li>
           <li>
             <span className="font-medium">3.</span> User pays by card and
             receives credits
           </li>
           <li>
-            <span className="font-medium">4.</span> User returns to the Finance
+            <span className="font-medium">4.</span> User returns to the Weather
             UI
           </li>
           <li>
-            <span className="font-medium">5.</span> Credits are verified and the
-            request is sent to the Finance Agent
+            <span className="font-medium">5.</span> UI confirms credits and
+            forwards the prompt to the Weather MCP
           </li>
           <li>
-            <span className="font-medium">6.</span> Agent validates with NVM,
-            processes the request, and redeems credits
+            <span className="font-medium">6.</span> MCP validates the request
+            with NVM, processes it, and redeems credits
           </li>
           <li>
-            <span className="font-medium">7.</span> The Response is delivered to
-            the user
+            <span className="font-medium">7.</span> Forecast is returned to the
+            user
           </li>
         </ol>
       </div>
@@ -89,4 +96,4 @@ const SimpleAgent = () => {
   )
 }
 
-export default SimpleAgent
+export default McpAgent

@@ -1,4 +1,4 @@
-import { Badge } from "@app/ui-core"
+import { Badge } from "./ui/badge"
 
 const MultiAgent = () => {
   return (
