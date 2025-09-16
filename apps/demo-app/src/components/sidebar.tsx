@@ -12,6 +12,8 @@ const Sidebar = ({ setView, view }: Props) => {
     <div className="w-70 bg-[#0D3F48] text-white p-6 flex flex-col fixed top-0 left-0 min-h-svh">
       {/* Logo */}
 
+      <img src="/pattern.png" className="h-72 w-40 top-0 right-0 absolute" />
+
       <div className="flex items-center gap-2 mb-8  ">
         <img src="/logo.svg" />
       </div>
