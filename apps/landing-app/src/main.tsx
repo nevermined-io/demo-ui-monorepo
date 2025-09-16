@@ -1,28 +1,59 @@
-import React from "react";
-import { createRoot } from "react-dom/client";
-import "./index.css";
-import { Button } from "@app/ui-core";
+import React, { useState } from "react"
+import { createRoot } from "react-dom/client"
+import "./index.css"
+import { Button } from "@app/ui-core"
+import { Github, MessageCircleMore } from "lucide-react"
+import Sidebar from "./components/sidebar"
+import SimpleAgent from "./components/simple-agent"
+import McpAgent from "./components/mcp-agent"
+import MultiAgent from "./components/multi-agent"
 
 function App() {
+  const [view, setView] = useState<"simple" | "mcp" | "multi">("simple")
+
+  const Title = {
+    simple: "Simple",
+    mcp: "MCP",
+    multi: "Multi-Agent System",
+  }
+
   return (
-    <main className="min-h-svh grid place-items-center p-8 bg-zinc-950 text-zinc-50">
-      <div className="w-full max-w-2xl text-center">
-        <h1 className="text-2xl font-semibold mb-6">Select an Agent UI</h1>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Button asChild>
-            <a href="/simple-agent/">Simple Agent</a>
-          </Button>
-          <Button asChild>
-            <a href="/mcp-agent/">MCP Agent</a>
-          </Button>
+    <div className="min-h-screen flex">
+      <Sidebar setView={setView} view={view} />
+
+      <div className="flex-1 ml-70">
+        <div className="flex items-center justify-between px-6 h-22 border-b">
+          <h1 className="text-2xl font-semibold text-gray-800">
+            {Title[view]} Agent - nooooo
+          </h1>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2 bg-transparent"
+            >
+              <Github className="w-4 h-4" />
+              Github
+            </Button>
+            <Button size="sm" className="bg-[#0D3F48]  flex items-center gap-2">
+              <MessageCircleMore className="w-4 h-4" />
+              View demo
+            </Button>
+          </div>
         </div>
+
+        {view === "simple" && <SimpleAgent />}
+
+        {view === "mcp" && <McpAgent />}
+
+        {view === "multi" && <MultiAgent />}
       </div>
-    </main>
-  );
+    </div>
+  )
 }
 
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <App />
   </React.StrictMode>
-);
+)
