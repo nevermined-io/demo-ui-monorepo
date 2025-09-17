@@ -17,6 +17,7 @@ import {
   getPlanCostRequest,
 } from "./chat-requests";
 import { buildNeverminedCheckoutUrl } from "./utils";
+import { loadRuntimeConfig } from "@app/config";
 import { useUserState } from "./user-state-context";
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -33,18 +34,15 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
   // Debug: log agent id presence on mount
   useEffect(() => {
-    const agentId =
-      (import.meta as any).env?.VITE_AGENT_ID ||
-      (globalThis as any)?.__RUNTIME_CONFIG__?.VITE_AGENT_ID;
+    const cfg = loadRuntimeConfig();
+    const agentId = cfg.agentId;
     console.log("[demo-agent-ui] VITE_AGENT_ID =", agentId);
     if (!agentId) {
       console.warn(
         "[demo-agent-ui] Missing VITE_AGENT_ID - checkout links will not include agent id"
       );
     }
-    const environment =
-      (import.meta as any).env?.VITE_NVM_ENVIRONMENT ||
-      (globalThis as any)?.__RUNTIME_CONFIG__?.VITE_NVM_ENVIRONMENT;
+    const environment = cfg.environment;
     console.log("[demo-agent-ui] VITE_NVM_ENVIRONMENT =", environment);
     if (!environment) {
       console.warn(
@@ -91,10 +89,15 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     // This function is kept for compatibility but no longer needed
   };
 
-  // Keys for localStorage
-  const LS_MESSAGES_KEY = "chat_messages";
-  const LS_CONVERSATIONS_KEY = "chat_conversations";
-  const LS_CURRENT_CONV_ID_KEY = "chat_current_conversation_id";
+  // Keys for localStorage (namespaced per app/transport). Includes migration from legacy keys.
+  const { transport } = loadRuntimeConfig();
+  const LS_PREFIX = transport ? `chat_${transport}` : "chat";
+  const LS_MESSAGES_KEY = `${LS_PREFIX}_messages`;
+  const LS_CONVERSATIONS_KEY = `${LS_PREFIX}_conversations`;
+  const LS_CURRENT_CONV_ID_KEY = `${LS_PREFIX}_current_conversation_id`;
+  const LEGACY_MESSAGES_KEY = "chat_messages";
+  const LEGACY_CONVERSATIONS_KEY = "chat_conversations";
+  const LEGACY_CURRENT_CONV_ID_KEY = "chat_current_conversation_id";
 
   // Persist messages and conversations on every change
   useEffect(() => {
@@ -125,12 +128,19 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     } catch {}
   }, [currentConversationId]);
 
-  // Load from localStorage on first mount (fallback to stored mocks if empty)
+  // Load from localStorage on first mount; migrate from legacy unscoped keys if present
   useEffect(() => {
     try {
-      const rawMsgs = localStorage.getItem(LS_MESSAGES_KEY);
-      const rawConvs = localStorage.getItem(LS_CONVERSATIONS_KEY);
-      const rawCurrent = localStorage.getItem(LS_CURRENT_CONV_ID_KEY);
+      // Prefer scoped keys; fallback to legacy keys for migration
+      const rawMsgs =
+        localStorage.getItem(LS_MESSAGES_KEY) ||
+        localStorage.getItem(LEGACY_MESSAGES_KEY);
+      const rawConvs =
+        localStorage.getItem(LS_CONVERSATIONS_KEY) ||
+        localStorage.getItem(LEGACY_CONVERSATIONS_KEY);
+      const rawCurrent =
+        localStorage.getItem(LS_CURRENT_CONV_ID_KEY) ||
+        localStorage.getItem(LEGACY_CURRENT_CONV_ID_KEY);
       const parsedMsgsRaw: FullMessage[] = rawMsgs ? JSON.parse(rawMsgs) : [];
       const parsedMsgs = dedupeMessages(parsedMsgsRaw);
       const parsedConvsRaw: Conversation[] = rawConvs
@@ -153,6 +163,27 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       setIsStoredConversation(
         Boolean(parsedMsgs.length === 0 && parsedConvs.length > 0)
       );
+      // If we loaded from legacy keys, migrate to scoped keys now
+      try {
+        const loadedFromLegacy =
+          !localStorage.getItem(LS_MESSAGES_KEY) &&
+          localStorage.getItem(LEGACY_MESSAGES_KEY);
+        if (loadedFromLegacy) {
+          localStorage.setItem(LS_MESSAGES_KEY, JSON.stringify(parsedMsgs));
+          localStorage.setItem(
+            LS_CONVERSATIONS_KEY,
+            JSON.stringify(parsedConvsRaw)
+          );
+          if (rawCurrent === null || rawCurrent === undefined) {
+            localStorage.removeItem(LS_CURRENT_CONV_ID_KEY);
+          } else {
+            localStorage.setItem(
+              LS_CURRENT_CONV_ID_KEY,
+              String(Number(rawCurrent))
+            );
+          }
+        }
+      } catch {}
       hydratedRef.current = true;
     } catch {
       setMessages([]);
@@ -275,8 +306,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
               llmReason && llmReason.trim()
                 ? llmReason.trim()
                 : llmAction === "no_credit"
-                ? "You have no credits."
-                : "Purchase is required to continue."
+                  ? "You have no credits."
+                  : "Purchase is required to continue."
             } Please complete the agent checkout: ${checkoutUrl}`,
             type: "notice",
             isUser: false,

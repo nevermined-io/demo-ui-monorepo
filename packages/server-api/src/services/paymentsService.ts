@@ -9,6 +9,112 @@ import {
 import { Client as McpClient } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 
+/**
+ * Calls the agent over HTTP using the direct agent endpoint and an access token.
+ * Only valid when the transport is "http".
+ * @param inputQuery Synthesized intent to send to the agent.
+ * @param nvmApiKey Nevermined API key.
+ * @param planId Plan DID.
+ * @returns Agent response payload.
+ */
+/**
+ * Calls the agent over HTTP using the direct agent endpoint and an access token.
+ * Only valid for the Simple Agent app context.
+ * @param inputQuery Synthesized intent to send to the HTTP agent.
+ * @param nvmApiKey Nevermined API key.
+ * @param planId Plan DID.
+ * @returns Agent response payload.
+ */
+export async function createTaskHttp(
+  inputQuery: string,
+  nvmApiKey: string,
+  planId: string,
+  agentEndpoint: string
+): Promise<any> {
+  const { accessToken } = await getAgentAccessToken(nvmApiKey, planId);
+  const response = await fetch(agentEndpoint, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ input_query: inputQuery }),
+  });
+  if (!response.ok) {
+    throw new Error(
+      `Agent request failed: ${response.status} ${response.statusText}`
+    );
+  }
+  return await response.json();
+}
+
+/**
+ * Calls the agent using MCP with either a plain text query mapped to a tool call
+ * or an explicit tool call. Only valid for the MCP Agent app context.
+ * @param input Plain string (mapped to default tool) or explicit { tool, args }.
+ * @param nvmApiKey Nevermined API key.
+ * @param planId Plan DID.
+ * @returns Agent response simplified to { output }.
+ */
+export async function createTaskMcp(
+  input: string | { tool: string; args: Record<string, any> },
+  nvmApiKey: string,
+  planId: string,
+  httpEndpoint: string
+): Promise<{ output: string }> {
+  const { accessToken } = await getAgentAccessToken(nvmApiKey, planId);
+  const transport = new StreamableHTTPClientTransport(new URL(httpEndpoint), {
+    requestInit: { headers: { Authorization: `Bearer ${accessToken}` } },
+  });
+  const client = new McpClient({
+    name: "weather-mcp-client",
+    version: "0.1.0",
+  });
+  try {
+    await client.connect(transport);
+    let toolName: string;
+    let toolArgs: Record<string, any> = {};
+    if (
+      typeof input === "object" &&
+      input &&
+      typeof (input as any).tool === "string"
+    ) {
+      toolName = (input as any).tool;
+      toolArgs = (input as any).args || {};
+    } else {
+      toolName =
+        process.env.MCP_TOOL ||
+        (process.env.RAW ? "weather.today.raw" : "weather.today");
+      const inputQuery = String(input || "");
+      toolArgs = inputQuery ? { city: inputQuery } : {};
+    }
+    const result: any = await client.callTool({
+      name: toolName,
+      arguments: toolArgs,
+    });
+    let outputText = "";
+    if (Array.isArray(result?.content)) {
+      const textItem = result.content.find(
+        (c: any) => c && typeof c === "object" && c.type === "text"
+      );
+      if (textItem && typeof textItem.text !== "undefined") {
+        outputText =
+          typeof textItem.text === "string"
+            ? textItem.text
+            : JSON.stringify(textItem.text);
+      }
+    }
+    if (!outputText)
+      outputText = typeof result === "string" ? result : JSON.stringify(result);
+    return { output: outputText };
+  } finally {
+    try {
+      await client.close();
+    } catch {}
+  }
+}
+
 /** Initializes the Nevermined Payments library. */
 export function initializePayments(
   nvmApiKey: string,
@@ -57,66 +163,29 @@ export async function getAgentAccessToken(
   return { accessToken: agentAccessParams.accessToken, agentId: agentDid };
 }
 
-/** Calls the agent using MCP. Accepts plain text or explicit tool call. */
+/**
+ * Calls the agent using the selected transport strictly without fallbacks.
+ * @param input String (HTTP: synthesized intent) or tool call (MCP).
+ * @param nvmApiKey Nevermined API key.
+ * @param planId Plan DID.
+ * @param mode Transport mode: "http" for Simple Agent, "mcp" for MCP Agent.
+ */
 export async function createTask(
   input: string | { tool: string; args: Record<string, any> },
   nvmApiKey: string,
-  planId: string
+  planId: string,
+  mode: "http" | "mcp",
+  httpEndpoint: string
 ): Promise<any> {
-  const mcpEndpoint = process.env.MCP_ENDPOINT || "http://localhost:3001/mcp";
-  const { accessToken } = await getAgentAccessToken(nvmApiKey, planId);
-  const transport = new StreamableHTTPClientTransport(new URL(mcpEndpoint), {
-    requestInit: { headers: { Authorization: `Bearer ${accessToken}` } },
-  });
-  const client = new McpClient({
-    name: "weather-mcp-client",
-    version: "0.1.0",
-  });
-  try {
-    await client.connect(transport);
-    let toolName: string;
-    let toolArgs: Record<string, any> = {};
-    if (
-      typeof input === "object" &&
-      input &&
-      typeof (input as any).tool === "string"
-    ) {
-      toolName = (input as any).tool;
-      toolArgs = (input as any).args || {};
-    } else {
-      toolName =
-        process.env.MCP_TOOL ||
-        (process.env.RAW ? "weather.today.raw" : "weather.today");
-      const inputQuery = String(input || "");
-      toolArgs = inputQuery ? { city: inputQuery } : {};
-    }
-    const result: any = await client.callTool({
-      name: toolName,
-      arguments: toolArgs,
-    });
-    let outputText = "";
-    if (Array.isArray(result?.content)) {
-      const textItem = result.content.find(
-        (c: any) => c && typeof c === "object" && c.type === "text"
+  if (mode === "http") {
+    if (typeof input !== "string") {
+      throw new Error(
+        "HTTP agent expects a string input_query. Provide synthesized intent as string."
       );
-      if (textItem && typeof textItem.text !== "undefined") {
-        outputText =
-          typeof textItem.text === "string"
-            ? textItem.text
-            : JSON.stringify(textItem.text);
-      }
     }
-    if (!outputText)
-      outputText = typeof result === "string" ? result : JSON.stringify(result);
-    return { output: outputText };
-  } catch (error) {
-    console.error("Error creating task:", error);
-    return { output: "Error creating task" };
-  } finally {
-    try {
-      await client.close();
-    } catch {}
+    return await createTaskHttp(input, nvmApiKey, planId, httpEndpoint);
   }
+  return await createTaskMcp(input, nvmApiKey, planId, httpEndpoint);
 }
 
 /** Lists available MCP tools. */

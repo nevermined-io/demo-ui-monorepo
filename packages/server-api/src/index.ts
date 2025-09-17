@@ -18,6 +18,53 @@ import {
 } from "./services/paymentsService";
 import { getCurrentBlockNumber } from "./services/blockchainService";
 import { loadAgentPrompt, loadLLMRouterPrompt } from "./services/promptService";
+import type { Request } from "express";
+
+/**
+ * Loads app-specific runtime config by fetching its public config.js based on Referer.
+ * Falls back gracefully if not available.
+ */
+async function loadAppRuntimeConfigFromReq(
+  req: Request
+): Promise<{ endpoint?: string; environment?: string; agentId?: string }> {
+  try {
+    const referer =
+      ((req.headers as any).referer as string) ||
+      ((req.headers as any).referrer as string) ||
+      "";
+    const isMcp = String(referer).includes("/mcp-agent");
+    const base = isMcp ? "/mcp-agent" : "/simple-agent";
+    const proto =
+      (req.headers["x-forwarded-proto"] as string) ||
+      (req as any).protocol ||
+      "http";
+    const host = (req.headers.host as string) || "localhost:3000";
+    const origin = `${proto}://${host}`;
+    const configUrl = `${origin}${base}/config.js`;
+    const resp = await fetch(configUrl);
+    if (!resp.ok) return {};
+    const text = await resp.text();
+    const extract = (key: string): string | undefined => {
+      const re = new RegExp(`${key}\\s*:\\s*['\"]([^'\"]+)['\"]`);
+      const m = text.match(re);
+      return (m && m[1]) || undefined;
+    };
+    const endpoint = extract("endpoint");
+    const environment = extract("environment");
+    const agentId = extract("agentId");
+    const result: {
+      endpoint?: string;
+      environment?: string;
+      agentId?: string;
+    } = {};
+    if (endpoint) result.endpoint = endpoint;
+    if (environment) result.environment = environment;
+    if (agentId) result.agentId = agentId;
+    return result;
+  } catch {
+    return {};
+  }
+}
 
 /**
  * Registers all API routes on a provided Express app and returns an http.Server.
@@ -167,12 +214,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!planId) {
         return res.status(500).json({ error: "Missing plan DID" });
       }
-      const agentResponse = await createTask(
-        inputQuery as any,
-        nvmApiKey,
-        planId
-      );
-      return res.status(200).json(agentResponse);
+      // Detect app context by Referer to choose transport without env vars
+      const headerMode = String(
+        (req.headers["x-agent-mode"] as string) || ""
+      ).toLowerCase();
+      const referer =
+        (req.headers as any).referer || (req.headers as any).referrer || "";
+      const inferredMode: "http" | "mcp" = String(referer).includes(
+        "/mcp-agent"
+      )
+        ? "mcp"
+        : "http";
+      const mode: "http" | "mcp" =
+        headerMode === "http" || headerMode === "mcp"
+          ? (headerMode as any)
+          : inferredMode;
+
+      // Load runtime config for this app (endpoint, environment, agentId)
+      const appCfg = await loadAppRuntimeConfigFromReq(req as any);
+      const prevEnv = {
+        AGENT_ENDPOINT: process.env.AGENT_ENDPOINT,
+        MCP_ENDPOINT: process.env.MCP_ENDPOINT,
+        NVM_ENVIRONMENT: process.env.NVM_ENVIRONMENT,
+        AGENT_DID: process.env.AGENT_DID,
+      } as Record<string, string | undefined>;
+      try {
+        if (mode === "http" && appCfg.endpoint)
+          process.env.AGENT_ENDPOINT = appCfg.endpoint;
+        if (mode === "mcp" && appCfg.endpoint)
+          process.env.MCP_ENDPOINT = appCfg.endpoint;
+        if (appCfg.environment)
+          process.env.NVM_ENVIRONMENT = appCfg.environment;
+        if (appCfg.agentId) process.env.AGENT_DID = appCfg.agentId;
+
+        const agentResponse = await createTask(
+          inputQuery as any,
+          nvmApiKey,
+          planId,
+          mode,
+          appCfg.endpoint || process.env.AGENT_ENDPOINT || ""
+        );
+        return res.status(200).json(agentResponse);
+      } finally {
+        // Restore previous env to avoid leaking between apps
+        process.env.AGENT_ENDPOINT = prevEnv.AGENT_ENDPOINT;
+        process.env.MCP_ENDPOINT = prevEnv.MCP_ENDPOINT;
+        process.env.NVM_ENVIRONMENT = prevEnv.NVM_ENVIRONMENT;
+        process.env.AGENT_DID = prevEnv.AGENT_DID;
+      }
     } catch (error) {
       console.error("Error creating task:", error);
       return res.status(500).json({ error: "Failed to call agent" });
@@ -196,8 +285,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!planId) {
         return res.status(500).json({ error: "Missing plan DID" });
       }
-      const tools = await listMcpTools(nvmApiKey, planId);
-      res.json(tools);
+      const appCfg = await loadAppRuntimeConfigFromReq(req as any);
+      const prev = {
+        MCP_ENDPOINT: process.env.MCP_ENDPOINT,
+        NVM_ENVIRONMENT: process.env.NVM_ENVIRONMENT,
+        AGENT_DID: process.env.AGENT_DID,
+      } as Record<string, string | undefined>;
+      try {
+        if (appCfg.endpoint) process.env.MCP_ENDPOINT = appCfg.endpoint;
+        if (appCfg.environment)
+          process.env.NVM_ENVIRONMENT = appCfg.environment;
+        if (appCfg.agentId) process.env.AGENT_DID = appCfg.agentId;
+        const tools = await listMcpTools(nvmApiKey, planId);
+        res.json(tools);
+      } finally {
+        process.env.MCP_ENDPOINT = prev.MCP_ENDPOINT;
+        process.env.NVM_ENVIRONMENT = prev.NVM_ENVIRONMENT;
+        process.env.AGENT_DID = prev.AGENT_DID;
+      }
     } catch (err) {
       console.error("Error listing MCP tools:", err);
       res.status(500).json({ error: "Failed to list MCP tools" });
@@ -228,8 +333,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!planId) {
         return res.status(500).json({ error: "Missing plan DID" });
       }
-      const result = await callMcpTool(tool, args || {}, nvmApiKey, planId);
-      res.json(result);
+      const appCfg = await loadAppRuntimeConfigFromReq(req as any);
+      const prev = {
+        MCP_ENDPOINT: process.env.MCP_ENDPOINT,
+        NVM_ENVIRONMENT: process.env.NVM_ENVIRONMENT,
+        AGENT_DID: process.env.AGENT_DID,
+      } as Record<string, string | undefined>;
+      try {
+        if (appCfg.endpoint) process.env.MCP_ENDPOINT = appCfg.endpoint;
+        if (appCfg.environment)
+          process.env.NVM_ENVIRONMENT = appCfg.environment;
+        if (appCfg.agentId) process.env.AGENT_DID = appCfg.agentId;
+        const result = await callMcpTool(tool, args || {}, nvmApiKey, planId);
+        res.json(result);
+      } finally {
+        process.env.MCP_ENDPOINT = prev.MCP_ENDPOINT;
+        process.env.NVM_ENVIRONMENT = prev.NVM_ENVIRONMENT;
+        process.env.AGENT_DID = prev.AGENT_DID;
+      }
     } catch (err) {
       console.error("Error calling MCP tool:", err);
       res.status(500).json({ error: "Failed to call MCP tool" });

@@ -226,7 +226,10 @@ export default function MessageGroup({
                */
               const explorerUrl = `https://base-sepolia.blockscout.com/tx/${message.txHash}`;
               const basePlanUrl =
-                (import.meta as any).env?.VITE_NVM_ENVIRONMENT === "sandbox"
+                ((globalThis as any)?.__RUNTIME_CONFIG__?.environment ||
+                  (globalThis as any)?.__RUNTIME_CONFIG__
+                    ?.VITE_NVM_ENVIRONMENT ||
+                  (import.meta as any).env?.VITE_NVM_ENVIRONMENT) === "sandbox"
                   ? "https://nevermined.app/en/plan/"
                   : "https://nevermined.dev/en/plan/";
               const credits = Number(message.credits);

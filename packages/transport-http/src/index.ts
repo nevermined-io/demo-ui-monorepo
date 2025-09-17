@@ -14,9 +14,11 @@ export class HttpAgentClient implements AgentClient {
   private commonHeaders(): HeadersInit {
     const apiKey = localStorage.getItem("nvmApiKey") || "";
     const planId = localStorage.getItem("nvmPlanId") || "";
+    const endpoint = (globalThis as any)?.__RUNTIME_CONFIG__?.endpoint || "";
     return {
       ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
       ...(planId ? { "X-Plan-Id": planId } : {}),
+      ...(endpoint ? { "X-Agent-Endpoint": endpoint } : {}),
     } as HeadersInit;
   }
 

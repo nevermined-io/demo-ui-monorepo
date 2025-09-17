@@ -55,12 +55,10 @@ export default function ChatContainer() {
   const [helpOpen, setHelpOpen] = useState(false);
   const hasApiKey = !!apiKey;
 
-  // Read title from runtime configuration; fallback to a default.
-  const appTitle = loadRuntimeConfig().appTitle || "Financial Advisor AI";
-
   // Prepare help modal copy based on transport (http vs mcp)
   const { transport } = loadRuntimeConfig();
   const isMcp = transport === "mcp";
+  const appTitle = isMcp ? "Weather Agent" : "Financial Advisor AI";
   const helpTitle = isMcp
     ? "About the Weather Agent"
     : "About this Financial Advisor";

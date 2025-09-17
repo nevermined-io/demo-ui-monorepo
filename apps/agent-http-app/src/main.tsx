@@ -15,10 +15,11 @@ createRoot(document.getElementById("root")!).render(
 
 function Bootstrap() {
   const cfg = loadRuntimeConfig();
+  const base = "/";
   const client =
     cfg.transport === "mcp"
-      ? new McpAgentClient("/")
-      : new HttpAgentClient("/");
+      ? new McpAgentClient(base)
+      : new HttpAgentClient(base);
   return (
     <AgentProvider client={client}>
       <App />
