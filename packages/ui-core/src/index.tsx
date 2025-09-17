@@ -4,25 +4,25 @@ import React, {
   useEffect,
   useMemo,
   useState,
-} from "react";
-import { HttpPaymentsClient } from "@app/payments-client";
-import type { PaymentsClient } from "@app/domain";
+} from "react"
+import { HttpPaymentsClient } from "@app/payments-client"
+import type { PaymentsClient } from "@app/domain"
 
 function extractParamFromUrl(
   param: string,
   clean: boolean = true
 ): string | null {
   try {
-    const url = new URL(window.location.href);
-    const value = url.searchParams.get(param);
+    const url = new URL(window.location.href)
+    const value = url.searchParams.get(param)
     if (value && clean) {
-      url.searchParams.delete(param);
-      const newUrl = `${url.origin}${url.pathname}${url.search}${url.hash}`;
-      window.history.replaceState({}, document.title, newUrl);
+      url.searchParams.delete(param)
+      const newUrl = `${url.origin}${url.pathname}${url.search}${url.hash}`
+      window.history.replaceState({}, document.title, newUrl)
     }
-    return value;
+    return value
   } catch {
-    return null;
+    return null
   }
 }
 
@@ -30,23 +30,23 @@ function extractParamFromUrl(
  * User state: apiKey, planId, credits, initialized.
  */
 type UserState = {
-  apiKey: string;
-  setApiKey: (k: string) => void;
-  planId: string;
-  setPlanId: (p: string) => void;
-  credits: number | null;
-  setCredits: (c: number | null) => void;
-  refreshCredits: () => Promise<void>;
-  initialized: boolean;
-};
+  apiKey: string
+  setApiKey: (k: string) => void
+  planId: string
+  setPlanId: (p: string) => void
+  credits: number | null
+  setCredits: (c: number | null) => void
+  refreshCredits: () => Promise<void>
+  initialized: boolean
+}
 
-const UserStateContext = createContext<UserState | undefined>(undefined);
+const UserStateContext = createContext<UserState | undefined>(undefined)
 
 export function useUserState(): UserState {
-  const ctx = useContext(UserStateContext);
+  const ctx = useContext(UserStateContext)
   if (!ctx)
-    throw new Error("useUserState must be used within UserStateProvider");
-  return ctx;
+    throw new Error("useUserState must be used within UserStateProvider")
+  return ctx
 }
 
 /**
@@ -55,60 +55,60 @@ export function useUserState(): UserState {
 export function UserStateProvider({ children }: { children: React.ReactNode }) {
   const [apiKey, setApiKey] = useState(
     () => localStorage.getItem("nvmApiKey") || ""
-  );
+  )
   const [planId, setPlanId] = useState(
     () => localStorage.getItem("nvmPlanId") || ""
-  );
-  const [credits, setCredits] = useState<number | null>(null);
-  const [initialized, setInitialized] = useState(false);
+  )
+  const [credits, setCredits] = useState<number | null>(null)
+  const [initialized, setInitialized] = useState(false)
 
   const payments: PaymentsClient = useMemo(
     () => new HttpPaymentsClient("/"),
     []
-  );
+  )
 
   const refreshCredits = async () => {
     try {
       if (!apiKey) {
-        setCredits(null);
-        return;
+        setCredits(null)
+        return
       }
-      const c = await payments.getUserCredits(apiKey, planId || "");
-      setCredits(typeof c === "number" ? c : null);
+      const c = await payments.getUserCredits(apiKey, planId || "")
+      setCredits(typeof c === "number" ? c : null)
     } catch {
-      setCredits(null);
+      setCredits(null)
     }
-  };
+  }
 
   useEffect(() => {
-    (async () => {
-      const apiFromUrl = extractParamFromUrl("nvm-api-key", true);
+    ;(async () => {
+      const apiFromUrl = extractParamFromUrl("nvm-api-key", true)
       if (apiFromUrl) {
-        localStorage.setItem("nvmApiKey", apiFromUrl);
-        setApiKey(apiFromUrl);
+        localStorage.setItem("nvmApiKey", apiFromUrl)
+        setApiKey(apiFromUrl)
       }
-      const planFromUrl = extractParamFromUrl("planId", true);
+      const planFromUrl = extractParamFromUrl("planId", true)
       if (planFromUrl) {
-        localStorage.setItem("nvmPlanId", planFromUrl);
-        setPlanId(planFromUrl);
+        localStorage.setItem("nvmPlanId", planFromUrl)
+        setPlanId(planFromUrl)
       }
-      await refreshCredits();
-      setInitialized(true);
-    })();
+      await refreshCredits()
+      setInitialized(true)
+    })()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [apiKey, planId]);
+  }, [apiKey, planId])
 
   const value = useMemo<UserState>(
     () => ({
       apiKey,
       setApiKey: (k: string) => {
-        localStorage.setItem("nvmApiKey", k);
-        setApiKey(k);
+        localStorage.setItem("nvmApiKey", k)
+        setApiKey(k)
       },
       planId,
       setPlanId: (p: string) => {
-        localStorage.setItem("nvmPlanId", p);
-        setPlanId(p);
+        localStorage.setItem("nvmPlanId", p)
+        setPlanId(p)
       },
       credits,
       setCredits,
@@ -116,14 +116,15 @@ export function UserStateProvider({ children }: { children: React.ReactNode }) {
       initialized,
     }),
     [apiKey, planId, credits, initialized]
-  );
+  )
 
   return (
     <UserStateContext.Provider value={value}>
       {children}
     </UserStateContext.Provider>
-  );
+  )
 }
 
-export { HttpPaymentsClient };
-export { Button } from "./components/ui/button";
+export { HttpPaymentsClient }
+export { Button } from "./components/ui/button"
+export { Badge } from "./components/ui/badge"
