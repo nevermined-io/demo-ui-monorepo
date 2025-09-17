@@ -49,6 +49,7 @@ export function createServer(): express.Express {
   const httpBase = "/simple-agent";
   const mcpBase = "/mcp-agent";
   const landingBase = "/";
+  const demoAppDir = path.resolve(repoRoot, "apps/demo-app");
 
   // Minimal landing page at /, served via Vite in dev and static in prod
   const publicDir = path.resolve(__dirname, "../public");
@@ -58,52 +59,43 @@ export function createServer(): express.Express {
   }
   const landingDistDir = path.resolve(landingAppDir, "dist");
   const landingIndexHtml = path.resolve(landingDistDir, "index.html");
+  const demoDistDir = path.resolve(demoAppDir, "dist");
+  const demoIndexHtml = path.resolve(demoDistDir, "index.html");
 
   if (process.env.NODE_ENV !== "production") {
-    // Dev: Vite middleware for both apps mounted under subpaths
+    // Dev: Vite middleware mounts
     (async () => {
       const { createServer: createViteServer } = await import("vite");
-      // Landing app via Vite middleware
-      if (fs.existsSync(landingAppDir)) {
-        const viteLanding = await createViteServer({
-          root: landingAppDir,
-          configFile: path.resolve(landingAppDir, "vite.config.ts"),
-          server: { middlewareMode: true, hmr: { port: 24677 } },
-          appType: "custom",
-        } as any);
-        // Only use landing Vite middlewares for its own assets and dev endpoints
-        const landingAssetPrefixes = [
-          "/@vite",
-          "/@id",
-          "/@react-refresh",
-          "/@fs",
-          "/__vite_ping",
-          "/src",
-          "/node_modules",
-          "/assets",
-        ];
-        app.use((req, res, next) => {
-          const p = req.path || "/";
-          if (
-            p === "/" ||
-            p === "/index.html" ||
-            landingAssetPrefixes.some((prefix) => p.startsWith(prefix))
-          ) {
-            return (viteLanding.middlewares as any)(req, res, next);
-          }
+      // Always serve demo-app at '/'
+      const viteDemo = await createViteServer({
+        root: demoAppDir,
+        configFile: path.resolve(demoAppDir, "vite.config.ts"),
+        server: { middlewareMode: true, hmr: { port: 24677 } },
+        appType: "custom",
+      } as any);
+      // Let demo-app Vite handle EVERY root path except reserved prefixes
+      app.use((req, res, next) => {
+        const p = req.path || "/";
+        if (
+          p.startsWith(httpBase) ||
+          p.startsWith(mcpBase) ||
+          p.startsWith("/api") ||
+          p === "/config.js"
+        ) {
           return next();
-        });
-        const indexPath = path.resolve(landingAppDir, "index.html");
-        app.get(["/", ""], async (_req, res, next) => {
-          try {
-            let template = await fs.promises.readFile(indexPath, "utf-8");
-            template = await viteLanding.transformIndexHtml("/", template);
-            res.status(200).set({ "Content-Type": "text/html" }).end(template);
-          } catch (e) {
-            next(e);
-          }
-        });
-      }
+        }
+        return (viteDemo.middlewares as any)(req, res, next);
+      });
+      const indexPath = path.resolve(demoAppDir, "index.html");
+      app.get(["/", ""], async (_req, res, next) => {
+        try {
+          let template = await fs.promises.readFile(indexPath, "utf-8");
+          template = await viteDemo.transformIndexHtml("/", template);
+          res.status(200).set({ "Content-Type": "text/html" }).end(template);
+        } catch (e) {
+          next(e);
+        }
+      });
 
       // Simple Agent (HTTP)
       const viteHttp = await createViteServer({
@@ -171,7 +163,7 @@ export function createServer(): express.Express {
       // Note: No catch-all fallback in dev to avoid intercepting agent apps
     })();
   } else {
-    // Prod: serve both built apps under their subpaths
+    // Prod: serve built apps under their subpaths and demo app at '/'
     const httpDistDir = path.resolve(httpAppDir, "dist");
     const httpIndexHtml = path.resolve(httpDistDir, "index.html");
     app.use(httpBase, express.static(httpDistDir));
@@ -199,22 +191,20 @@ export function createServer(): express.Express {
         .status(500)
         .send("MCP Agent app not built. Please run its build first.");
     });
-    // Landing built output (serve static if present)
-    if (fs.existsSync(landingDistDir)) {
-      app.use(express.static(landingDistDir));
+    // Root app: always Demo app
+    if (fs.existsSync(demoDistDir)) {
+      app.use(express.static(demoDistDir));
     }
     // Always register root and fallback to show helpful error if not built
     app.get(["/", ""], (_req: Request, res: Response) => {
-      if (fs.existsSync(landingIndexHtml)) {
+      if (fs.existsSync(demoIndexHtml)) {
         res.setHeader("Content-Type", "text/html; charset=utf-8");
-        res.send(fs.readFileSync(landingIndexHtml, "utf-8"));
+        res.send(fs.readFileSync(demoIndexHtml, "utf-8"));
         return;
       }
-      res
-        .status(500)
-        .send("Landing app not built. Please run its build first.");
+      res.status(500).send("Demo app not built. Please run its build first.");
     });
-    // Fallback for any non-app, non-API route to serve Landing index.html
+    // Fallback for any non-app, non-API route to serve Demo index.html
     app.get("*", (_req: Request, res: Response, next) => {
       const p = _req.path || "/";
       if (
@@ -225,14 +215,12 @@ export function createServer(): express.Express {
       ) {
         return next();
       }
-      if (fs.existsSync(landingIndexHtml)) {
+      if (fs.existsSync(demoIndexHtml)) {
         res.setHeader("Content-Type", "text/html; charset=utf-8");
-        res.send(fs.readFileSync(landingIndexHtml, "utf-8"));
+        res.send(fs.readFileSync(demoIndexHtml, "utf-8"));
         return;
       }
-      res
-        .status(500)
-        .send("Landing app not built. Please run its build first.");
+      res.status(500).send("Demo app not built. Please run its build first.");
     });
   }
 

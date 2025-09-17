@@ -21,9 +21,6 @@
     "packages/*",
     "apps/*"
   ],
-  "overrides": {
-    "tailwindcss": "^3.4.14"
-  },
   "devDependencies": {
     "@types/node": "^24.3.1",
     "@types/react": "^19.1.12",

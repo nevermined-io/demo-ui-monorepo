@@ -1,15 +1,15 @@
-import { CloudSunRain, WalletCards, Youtube } from "lucide-react"
+import { CloudSunRain, WalletCards, Youtube } from "lucide-react";
 
-type View = "simple" | "mcp" | "multi"
+type View = "simple" | "mcp" | "multi";
 
 interface Props {
-  view: View
-  setView: (view: View) => void
+  view: View;
+  setView: (view: View) => void;
 }
 
 const Sidebar = ({ setView, view }: Props) => {
   return (
-    <div className="w-70 bg-[#0D3F48] text-white p-6 flex flex-col fixed top-0 left-0 min-h-svh">
+    <div className="w-[17.5rem] bg-[#0D3F48] text-white p-6 flex flex-col fixed top-0 left-0 min-h-[100svh]">
       {/* Logo */}
 
       <img src="/pattern.png" className="h-72 w-40 top-0 right-0 absolute" />
@@ -57,7 +57,7 @@ const Sidebar = ({ setView, view }: Props) => {
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default Sidebar
+export default Sidebar;
