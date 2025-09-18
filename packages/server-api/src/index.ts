@@ -1,4 +1,4 @@
-import type { Express, Request, Response } from "express";
+import type { Express } from "express";
 import { createServer, type Server } from "http";
 import {
   llmRouter,
@@ -50,8 +50,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const nvmApiKey = authHeader.replace("Bearer ", "").trim();
       if (!nvmApiKey) return res.status(401).json({ error: "Missing API Key" });
-      const planId =
-        (req.headers["x-plan-id"] as string) || process.env.PLAN_ID || "";
+      const planId = req.headers["x-plan-id"] as string;
       if (!planId) return res.status(500).json({ error: "Missing plan DID" });
       const credit = await getUserCredits(nvmApiKey, planId);
       res.json({ credit });
@@ -73,8 +72,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const nvmApiKey = authHeader.replace("Bearer ", "").trim();
         if (nvmApiKey) {
           try {
-            const planId =
-              (req.headers["x-plan-id"] as string) || process.env.PLAN_ID || "";
+            const planId = req.headers["x-plan-id"] as string;
             if (planId) credits = await getUserCredits(nvmApiKey, planId);
           } catch {
             credits = 0;
@@ -92,8 +90,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/order-plan", async (req, res) => {
-    const planId =
-      (req.headers["x-plan-id"] as string) || process.env.PLAN_ID || "";
+    const planId = req.headers["x-plan-id"] as string;
     if (!planId) {
       return res.status(500).json({ error: "Missing plan DID" });
     }
@@ -163,8 +160,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(401).json({ error: "Missing API Key" });
     }
     try {
-      const planId =
-        (req.headers["x-plan-id"] as string) || process.env.PLAN_ID || "";
+      const planId = req.headers["x-plan-id"] as string;
       if (!planId) {
         return res.status(500).json({ error: "Missing plan DID" });
       }
@@ -219,8 +215,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(401).json({ error: "Missing API Key" });
     }
     try {
-      const planId =
-        (req.headers["x-plan-id"] as string) || process.env.PLAN_ID || "";
+      const planId = req.headers["x-plan-id"] as string;
       if (!planId) {
         return res.status(500).json({ error: "Missing plan DID" });
       }
@@ -228,24 +223,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Load MCP agent configuration
       const agentConfig = loadAgentConfig("mcp");
 
-      const prevEnv = {
-        NVM_ENVIRONMENT: process.env.NVM_ENVIRONMENT,
-      } as Record<string, string | undefined>;
-
-      try {
-        // Set environment for the MCP service
-        process.env.NVM_ENVIRONMENT = agentConfig.environment;
-
-        const tools = await listMcpTools(
-          nvmApiKey,
-          planId,
-          agentConfig.id,
-          agentConfig.environment
-        );
-        res.json(tools);
-      } finally {
-        process.env.NVM_ENVIRONMENT = prevEnv.NVM_ENVIRONMENT;
-      }
+      const tools = await listMcpTools(
+        nvmApiKey,
+        planId,
+        agentConfig.id,
+        agentConfig.environment,
+        agentConfig.endpoint
+      );
+      res.json(tools);
     } catch (err) {
       console.error("Error listing MCP tools:", err);
       res.status(500).json({ error: "Failed to list MCP tools" });
@@ -271,8 +256,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(401).json({ error: "Missing API Key" });
     }
     try {
-      const planId =
-        (req.headers["x-plan-id"] as string) || process.env.PLAN_ID || "";
+      const planId = req.headers["x-plan-id"] as string;
       if (!planId) {
         return res.status(500).json({ error: "Missing plan DID" });
       }
@@ -294,7 +278,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           nvmApiKey,
           planId,
           agentConfig.id,
-          agentConfig.environment
+          agentConfig.environment,
+          agentConfig.endpoint
         );
         res.json(result);
       } finally {
@@ -331,8 +316,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(401).json({ error: "Missing API Key" });
     }
     try {
-      const planId =
-        (req.headers["x-plan-id"] as string) || process.env.PLAN_ID || "";
+      const planId = req.headers["x-plan-id"] as string;
       if (!planId) {
         return res.status(500).json({ error: "Missing plan DID" });
       }
@@ -366,8 +350,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!nvmApiKey) {
       return res.status(401).json({ error: "Missing API Key" });
     }
-    const planId =
-      (req.headers["x-plan-id"] as string) || process.env.PLAN_ID || "";
+    const planId = req.headers["x-plan-id"] as string;
     if (!planId) {
       return res.status(500).json({ error: "Missing plan DID" });
     }
@@ -387,8 +370,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(401).json({ error: "Missing API Key" });
     }
     try {
-      const planId =
-        (req.headers["x-plan-id"] as string) || process.env.PLAN_ID || "";
+      const planId = req.headers["x-plan-id"] as string;
       if (!planId) {
         return res.status(500).json({ error: "Missing plan DID" });
       }
@@ -406,8 +388,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .status(400)
         .json({ error: "Missing or invalid credits amount" });
     }
-    const planId =
-      (req.headers["x-plan-id"] as string) || process.env.PLAN_ID || "";
+    const planId = req.headers["x-plan-id"] as string;
     if (!planId) {
       return res.status(500).json({ error: "Missing plan DID" });
     }

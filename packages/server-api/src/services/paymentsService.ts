@@ -225,16 +225,18 @@ export async function listMcpTools(
   nvmApiKey: string,
   planId: string,
   agentId: string,
-  environment: string
+  environment: string,
+  mcpEndpoint?: string
 ): Promise<any> {
-  const mcpEndpoint = process.env.MCP_ENDPOINT || "http://localhost:3001/mcp";
+  const endpoint =
+    mcpEndpoint || process.env.MCP_ENDPOINT || "http://localhost:3001/mcp";
   const { accessToken } = await getAgentAccessToken(
     nvmApiKey,
     planId,
     agentId,
     environment
   );
-  const transport = new StreamableHTTPClientTransport(new URL(mcpEndpoint), {
+  const transport = new StreamableHTTPClientTransport(new URL(endpoint), {
     requestInit: { headers: { Authorization: `Bearer ${accessToken}` } },
   });
   const client = new McpClient({
@@ -262,16 +264,18 @@ export async function callMcpTool(
   nvmApiKey: string,
   planId: string,
   agentId: string,
-  environment: string
+  environment: string,
+  mcpEndpoint?: string
 ): Promise<{ output: string; content?: any }> {
-  const mcpEndpoint = process.env.MCP_ENDPOINT || "http://localhost:3001/mcp";
+  const endpoint =
+    mcpEndpoint || process.env.MCP_ENDPOINT || "http://localhost:3001/mcp";
   const { accessToken } = await getAgentAccessToken(
     nvmApiKey,
     planId,
     agentId,
     environment
   );
-  const transport = new StreamableHTTPClientTransport(new URL(mcpEndpoint), {
+  const transport = new StreamableHTTPClientTransport(new URL(endpoint), {
     requestInit: { headers: { Authorization: `Bearer ${accessToken}` } },
   });
   const client = new McpClient({

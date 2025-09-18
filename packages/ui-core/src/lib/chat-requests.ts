@@ -75,16 +75,20 @@ export async function titleSummarizeRequest(history: any[]): Promise<any> {
 /**
  * Calls the intent synthesizer endpoint to get the user's intent.
  * @param {any[]} history - The chat history.
+ * @param {any} toolsCatalog - Optional MCP tools catalog for MCP transport.
  * @returns {Promise<any>} The response data.
  */
-export async function intentSynthesizeRequest(history: any[]): Promise<any> {
+export async function intentSynthesizeRequest(
+  history: any[],
+  toolsCatalog?: any
+): Promise<any> {
   const resp = await fetch("/api/intent/synthesize", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       ...getPlanIdHeader(),
     },
-    body: JSON.stringify({ history }),
+    body: JSON.stringify({ history, toolsCatalog }),
   });
   if (!resp.ok) throw new Error("intent-synthesize request failed");
   return await resp.json();

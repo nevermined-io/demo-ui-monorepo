@@ -7,7 +7,12 @@ import {
   ReactNode,
 } from "react";
 import { FullMessage, ChatContextType } from "./chat-types";
-import { getCurrentBlockNumber, sendMessageToAgent } from "./chat-api";
+import {
+  getCurrentBlockNumber,
+  sendMessageToAgent,
+  listMcpToolsClient,
+  callMcpToolClient,
+} from "./chat-api";
 import { storedConversations, storedMessages } from "./chat-mocks";
 import { Conversation } from "@shared/schema";
 import {
@@ -324,6 +329,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       setTimeout(processPendingAction, 100);
     };
 
+    // Check for pending action immediately on mount (in case event was already fired)
+    setTimeout(processPendingAction, 200);
+
     window.addEventListener(
       "resume-chat-action",
       resumeHandler as EventListener
@@ -547,10 +555,37 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
     // Use intent synthesis for agent prompt
     let agentPrompt = "";
+    let mcpToolCall: { tool: string; args: Record<string, any> } | null = null;
+
+    // For MCP transport, negotiate with MCP tools before intent synthesis
+    const transport = (import.meta as any).env?.VITE_TRANSPORT || "http";
+    let toolsCatalog: any | undefined = undefined;
+
+    if (transport === "mcp") {
+      try {
+        toolsCatalog = await listMcpToolsClient();
+      } catch (e) {
+        console.warn("[ChatProvider] Failed to list MCP tools:", e);
+      }
+    }
+
     try {
-      const data = await intentSynthesizeRequest(llmHistory);
+      const data = await intentSynthesizeRequest(llmHistory, toolsCatalog);
       if (data.intent) {
         agentPrompt = data.intent;
+      } else if (
+        data.intent &&
+        typeof data.intent === "object" &&
+        data.intent.tool
+      ) {
+        mcpToolCall = data.intent as {
+          tool: string;
+          args: Record<string, any>;
+        };
+      } else if (data && typeof data === "object" && data.tool) {
+        mcpToolCall = data as { tool: string; args: Record<string, any> };
+      } else if (typeof data === "string") {
+        agentPrompt = data;
       } else {
         // Do not fallback to raw content; require synthesized intent
         debugSetMessages((prev) => [
@@ -598,7 +633,19 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           timestamp: new Date(),
         },
       ]);
-      const agentResponse = await sendMessageToAgent(agentPrompt);
+
+      let agentResponse:
+        | { response: string; content?: any }
+        | { response: string; txHash?: string; credits?: number };
+
+      if (mcpToolCall && mcpToolCall.tool) {
+        agentResponse = await callMcpToolClient(
+          mcpToolCall.tool,
+          mcpToolCall.args || {}
+        );
+      } else {
+        agentResponse = await sendMessageToAgent(agentPrompt);
+      }
 
       // Remove thinking message and add the agent's response
       debugSetMessages((prev) => [
@@ -613,21 +660,30 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         },
       ]);
 
-      // Handle transaction if present
-      if (agentResponse.txHash) {
+      // Handle transaction if present (only for HTTP agent responses)
+      if (
+        "txHash" in agentResponse &&
+        agentResponse.txHash &&
+        "credits" in agentResponse
+      ) {
+        const httpResponse = agentResponse as {
+          response: string;
+          txHash: string;
+          credits: number;
+        };
         debugSetMessages((prev) => [
           ...prev,
           {
             id: prev.length + 1,
-            content: `Task completed. ${agentResponse.credits} credit${
-              agentResponse.credits === 1 ? "" : "s"
+            content: `Task completed. ${httpResponse.credits} credit${
+              httpResponse.credits === 1 ? "" : "s"
             } have been deducted from your balance.`,
             type: "nvm-transaction-user",
             isUser: false,
             conversationId: currentConversationId?.toString() || "new",
             timestamp: new Date(),
-            txHash: agentResponse.txHash,
-            credits: agentResponse.credits,
+            txHash: httpResponse.txHash,
+            credits: httpResponse.credits,
           },
         ]);
 
@@ -636,7 +692,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           const data = await getPlanCostRequest();
           const planPrice = Number(data.planPrice);
           const planCredits = Number(data.planCredits);
-          const creditsUsed = Number(agentResponse.credits);
+          const creditsUsed = Number(httpResponse.credits);
           const cost =
             planCredits > 0 ? (planPrice / planCredits) * creditsUsed : 0;
           debugSetMessages((prev) => [
