@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+// Removed loadRuntimeConfig import - using environment variables directly
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -106,5 +107,66 @@ export function buildLocalCheckoutLink(
     return url.toString();
   } catch {
     return "";
+  }
+}
+
+/**
+ * Returns the localStorage key for storing the Plan ID, namespaced by transport (agent type).
+ * Falls back to legacy key "nvmPlanId" if transport is unavailable.
+ * @returns {string} The localStorage key to use for Plan ID persistence.
+ */
+export function getPlanIdStorageKey(): string {
+  try {
+    // Get transport from environment variables (same as other parts of the codebase)
+    const transport = (import.meta as any).env?.VITE_TRANSPORT || "http";
+    console.log(
+      "[getPlanIdStorageKey] transport from VITE_TRANSPORT:",
+      transport
+    );
+    return `nvmPlanId_${transport}`;
+  } catch (error) {
+    console.warn("[getPlanIdStorageKey] Error getting transport:", error);
+    return "nvmPlanId_http";
+  }
+}
+
+/**
+ * Reads the stored Plan ID from localStorage using a transport-scoped key,
+ * with a backward-compatible fallback to the legacy unscoped key.
+ * @returns {string} The stored Plan ID or an empty string if not present.
+ */
+export function getStoredPlanId(): string {
+  try {
+    const scopedKey = getPlanIdStorageKey();
+    console.log("[getStoredPlanId] scopedKey:", scopedKey);
+    const scopedValue = localStorage.getItem(scopedKey);
+    const legacyValue = localStorage.getItem("nvmPlanId");
+    console.log(
+      "[getStoredPlanId] scopedValue:",
+      scopedValue,
+      "legacyValue:",
+      legacyValue
+    );
+    return scopedValue || legacyValue || "";
+  } catch (error) {
+    console.warn("[getStoredPlanId] Error:", error);
+    return "";
+  }
+}
+
+/**
+ * Persists the given Plan ID to localStorage using a transport-scoped key.
+ * Does not write to the legacy key to avoid cross-transport collisions.
+ * @param {string} planId - The plan DID to store.
+ * @returns {void}
+ */
+export function setStoredPlanId(planId: string): void {
+  try {
+    const scopedKey = getPlanIdStorageKey();
+    console.log("[setStoredPlanId] scopedKey:", scopedKey, "planId:", planId);
+    localStorage.setItem(scopedKey, planId);
+    console.log("[setStoredPlanId] Successfully stored planId in", scopedKey);
+  } catch (error) {
+    console.warn("[setStoredPlanId] Error:", error);
   }
 }

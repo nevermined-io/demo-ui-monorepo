@@ -10,6 +10,7 @@ import { Input } from "./input";
 import { Button } from "./button";
 import { Slider } from "./slider";
 import { useUserState } from "@/lib/user-state-context";
+import { getStoredPlanId, setStoredPlanId } from "@/lib/utils";
 import { useChat } from "@/lib/chat-context";
 
 /**
@@ -61,7 +62,7 @@ function SettingsModalContent({
     if (open) {
       const stored = localStorage.getItem("nvmApiKey") || "";
       setApiKey(stored);
-      const storedPlan = localStorage.getItem("nvmPlanId") || "";
+      const storedPlan = getStoredPlanId() || "";
       setLocalPlanId(storedPlan);
       setTouched(false);
       setError("");
@@ -91,13 +92,17 @@ function SettingsModalContent({
     setLoading(true);
     setError("");
     try {
+      const transport = (import.meta as any).env?.VITE_TRANSPORT || "http";
       const resp = await fetch("/api/credit", {
-        headers: { Authorization: `Bearer ${apiKey.trim()}` },
+        headers: {
+          Authorization: `Bearer ${apiKey.trim()}`,
+          "X-Agent-Mode": transport,
+        },
       });
       if (!resp.ok) throw new Error("Invalid API Key");
       localStorage.setItem("nvmApiKey", apiKey.trim());
       if (localPlanId.trim()) {
-        localStorage.setItem("nvmPlanId", localPlanId.trim());
+        setStoredPlanId(localPlanId.trim());
         setPlanId(localPlanId.trim());
       }
       setTouched(false);
@@ -120,11 +125,13 @@ function SettingsModalContent({
     setBurnError("");
     setBurnSuccess("");
     try {
+      const transport = (import.meta as any).env?.VITE_TRANSPORT || "http";
       const resp = await fetch("/api/burn-credits", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${apiKey.trim()}`,
+          "X-Agent-Mode": transport,
         },
         body: JSON.stringify({ credits: burnAmount }),
       });

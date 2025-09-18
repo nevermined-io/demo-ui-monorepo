@@ -13,8 +13,12 @@ export function useUserCredits() {
   const fetchCredits = useCallback(async () => {
     try {
       const apiKey = localStorage.getItem("nvmApiKey");
+      const transport = (import.meta as any).env?.VITE_TRANSPORT || "http";
       const resp = await fetch("/api/credit", {
-        headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : {},
+        headers: {
+          ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+          "X-Agent-Mode": transport,
+        },
       });
       if (!resp.ok) throw new Error("Unauthorized or error fetching credits");
       const data = await resp.json();

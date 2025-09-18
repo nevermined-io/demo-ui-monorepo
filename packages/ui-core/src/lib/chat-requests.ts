@@ -3,6 +3,7 @@
  * All functions wrap fetch calls for chat-related endpoints.
  * @module chat-requests
  */
+import { getStoredPlanId } from "./utils";
 
 /**
  * Calls the LLM router endpoint to determine the next action.
@@ -24,9 +25,7 @@ export async function llmRouterRequest(
     headers: {
       "Content-Type": "application/json",
       ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
-      ...(localStorage.getItem("nvmPlanId")
-        ? { "X-Plan-Id": String(localStorage.getItem("nvmPlanId")) }
-        : {}),
+      ...getPlanIdHeader(),
     },
     body: JSON.stringify({
       message: content,
@@ -48,9 +47,7 @@ export async function orderPlanRequest(): Promise<any> {
     headers: {
       "Content-Type": "application/json",
       ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
-      ...(localStorage.getItem("nvmPlanId")
-        ? { "X-Plan-Id": String(localStorage.getItem("nvmPlanId")) }
-        : {}),
+      ...getPlanIdHeader(),
     },
   });
   if (!resp.ok) throw new Error("order-plan request failed");
@@ -67,9 +64,7 @@ export async function titleSummarizeRequest(history: any[]): Promise<any> {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      ...(localStorage.getItem("nvmPlanId")
-        ? { "X-Plan-Id": String(localStorage.getItem("nvmPlanId")) }
-        : {}),
+      ...getPlanIdHeader(),
     },
     body: JSON.stringify({ history }),
   });
@@ -87,9 +82,7 @@ export async function intentSynthesizeRequest(history: any[]): Promise<any> {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      ...(localStorage.getItem("nvmPlanId")
-        ? { "X-Plan-Id": String(localStorage.getItem("nvmPlanId")) }
-        : {}),
+      ...getPlanIdHeader(),
     },
     body: JSON.stringify({ history }),
   });
@@ -109,11 +102,24 @@ export async function getPlanCostRequest(): Promise<{
   const resp = await fetch(`/api/plan/cost`, {
     headers: {
       ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
-      ...(localStorage.getItem("nvmPlanId")
-        ? { "X-Plan-Id": String(localStorage.getItem("nvmPlanId")) }
-        : {}),
+      ...getPlanIdHeader(),
     },
   });
   if (!resp.ok) throw new Error("plan-cost request failed");
   return await resp.json();
+}
+
+/**
+ * Builds the Plan ID header map using the namespaced storage key.
+ * Includes backward compatibility by reading the legacy key if scoped is empty.
+ * @returns {Record<string, string>} Header object (possibly empty).
+ */
+function getPlanIdHeader(): Record<string, string> {
+  try {
+    const planId: string = getStoredPlanId();
+    return planId ? { "X-Plan-Id": planId } : {};
+  } catch {
+    const legacy = getStoredPlanId();
+    return legacy ? { "X-Plan-Id": legacy } : {};
+  }
 }

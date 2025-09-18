@@ -1,5 +1,10 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { extractApiKeyFromUrl, extractPlanIdFromUrl } from "./utils";
+import {
+  extractApiKeyFromUrl,
+  extractPlanIdFromUrl,
+  getStoredPlanId,
+  setStoredPlanId,
+} from "./utils";
 
 /**
  * Context for the global user state (API Key and credits)
@@ -33,9 +38,7 @@ export function UserStateProvider({ children }: { children: React.ReactNode }) {
   const [apiKey, setApiKey] = useState(
     () => localStorage.getItem("nvmApiKey") || ""
   );
-  const [planId, setPlanId] = useState<string>(
-    () => localStorage.getItem("nvmPlanId") || ""
-  );
+  const [planId, setPlanId] = useState<string>(() => getStoredPlanId());
   const [credits, setCredits] = useState<number | null>(null);
   const [initialized, setInitialized] = useState(false);
 
@@ -46,11 +49,13 @@ export function UserStateProvider({ children }: { children: React.ReactNode }) {
         setCredits(null);
         return;
       }
-      const planIdHeader = localStorage.getItem("nvmPlanId") || "";
+      const planIdHeader = getStoredPlanId();
+      const transport = (import.meta as any).env?.VITE_TRANSPORT || "http";
       const resp = await fetch("/api/credit", {
         headers: {
           Authorization: `Bearer ${apiKey}`,
           ...(planIdHeader ? { "X-Plan-Id": planIdHeader } : {}),
+          "X-Agent-Mode": transport,
         },
       });
       if (!resp.ok) throw new Error();
@@ -76,10 +81,16 @@ export function UserStateProvider({ children }: { children: React.ReactNode }) {
     if (parsedKey) {
       localStorage.setItem("nvmApiKey", parsedKey);
       setApiKey(parsedKey);
+
+      // Dispatch event to resume pending chat action after checkout return
+      const event = new CustomEvent("checkout-return", {
+        detail: { apiKey: parsedKey },
+      });
+      window.dispatchEvent(event);
     }
     const parsedPlan = extractPlanIdFromUrl(true);
     if (parsedPlan) {
-      localStorage.setItem("nvmPlanId", parsedPlan);
+      setStoredPlanId(parsedPlan);
       setPlanId(parsedPlan);
     }
     // We don't include setters in deps to avoid loops

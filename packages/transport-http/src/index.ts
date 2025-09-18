@@ -1,4 +1,22 @@
 import type { AgentClient, AgentCapabilities } from "@app/domain";
+// Removed loadRuntimeConfig import - using environment variables directly
+
+/**
+ * Gets the stored Plan ID with transport-specific namespacing.
+ * @returns {string} The stored Plan ID or empty string if not present.
+ */
+function getStoredPlanId(): string {
+  try {
+    const transport = "http"; // HTTP transport is hardcoded for this package
+    const scopedKey = `nvmPlanId_${transport}`;
+    const scopedValue = localStorage.getItem(scopedKey);
+    const legacyValue = localStorage.getItem("nvmPlanId");
+    return scopedValue || legacyValue || "";
+  } catch (error) {
+    console.warn("[transport-http] getStoredPlanId error:", error);
+    return "";
+  }
+}
 
 /**
  * HTTP transport calling existing backend proxy endpoints.
@@ -13,12 +31,15 @@ export class HttpAgentClient implements AgentClient {
 
   private commonHeaders(): HeadersInit {
     const apiKey = localStorage.getItem("nvmApiKey") || "";
-    const planId = localStorage.getItem("nvmPlanId") || "";
+    const transport = "http"; // HTTP transport is hardcoded for this package
+    const scopedKey = `nvmPlanId_${transport}`;
+    const planId = getStoredPlanId();
     const endpoint = (globalThis as any)?.__RUNTIME_CONFIG__?.endpoint || "";
     return {
       ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
       ...(planId ? { "X-Plan-Id": planId } : {}),
       ...(endpoint ? { "X-Agent-Endpoint": endpoint } : {}),
+      "X-Agent-Mode": transport,
     } as HeadersInit;
   }
 

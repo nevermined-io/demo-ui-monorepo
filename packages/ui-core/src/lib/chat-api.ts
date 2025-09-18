@@ -7,13 +7,30 @@
  * Get the current block number from the backend.
  * @returns Promise resolving to the current block number.
  */
+import { getStoredPlanId } from "./utils";
+
+/**
+ * Builds the Plan ID header map using the namespaced storage key.
+ * Includes backward compatibility by reading the legacy key if scoped is empty.
+ * @returns {Record<string, string>} Header object (possibly empty).
+ */
+function getPlanIdHeader(): Record<string, string> {
+  try {
+    const planId: string = getStoredPlanId();
+    return planId ? { "X-Plan-Id": planId } : {};
+  } catch {
+    const legacy = getStoredPlanId();
+    return legacy ? { "X-Plan-Id": legacy } : {};
+  }
+}
+
 export async function getCurrentBlockNumber(): Promise<number> {
+  const transport = (import.meta as any).env?.VITE_TRANSPORT || "http";
   const response = await fetch("/api/latest-block", {
     method: "GET",
     headers: {
-      ...(localStorage.getItem("nvmPlanId")
-        ? { "X-Plan-Id": String(localStorage.getItem("nvmPlanId")) }
-        : {}),
+      ...getPlanIdHeader(),
+      "X-Agent-Mode": transport,
     },
   });
   if (!response.ok) throw new Error("Failed to get current block number");
@@ -32,13 +49,15 @@ export async function sendMessageToAgent(content: string): Promise<{
   credits?: number;
 }> {
   const apiKey = localStorage.getItem("nvmApiKey");
-  const planId = localStorage.getItem("nvmPlanId") || "";
+  const planId = getStoredPlanId() || "";
+  const transport = (import.meta as any).env?.VITE_TRANSPORT || "http";
   const response = await fetch("/api/agent", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
       ...(planId ? { "X-Plan-Id": planId } : {}),
+      "X-Agent-Mode": transport,
     },
     body: JSON.stringify({ input_query: content }),
   });
@@ -58,13 +77,15 @@ export async function sendMessageToAgent(content: string): Promise<{
  */
 export async function getTask(task_id: string): Promise<any> {
   const apiKey = localStorage.getItem("nvmApiKey");
-  const planId = localStorage.getItem("nvmPlanId") || "";
+  const planId = getStoredPlanId() || "";
+  const transport = (import.meta as any).env?.VITE_TRANSPORT || "http";
   const response = await fetch(`/api/task?task_id=${task_id}`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
       ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
       ...(planId ? { "X-Plan-Id": planId } : {}),
+      "X-Agent-Mode": transport,
     },
   });
 
@@ -82,13 +103,15 @@ export async function getBurnTransaction(
   blockNumber: number
 ): Promise<any | null> {
   const apiKey = localStorage.getItem("nvmApiKey");
-  const planId = localStorage.getItem("nvmPlanId") || "";
+  const planId = getStoredPlanId() || "";
+  const transport = (import.meta as any).env?.VITE_TRANSPORT || "http";
   const burnTxResp = await fetch(`/api/find-burn-tx?fromBlock=${blockNumber}`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
       ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
       ...(planId ? { "X-Plan-Id": planId } : {}),
+      "X-Agent-Mode": transport,
     },
   });
   if (!burnTxResp.ok) return null;

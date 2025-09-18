@@ -29,9 +29,16 @@ export async function createTaskHttp(
   inputQuery: string,
   nvmApiKey: string,
   planId: string,
-  agentEndpoint: string
+  agentEndpoint: string,
+  agentId: string,
+  environment: string
 ): Promise<any> {
-  const { accessToken } = await getAgentAccessToken(nvmApiKey, planId);
+  const { accessToken } = await getAgentAccessToken(
+    nvmApiKey,
+    planId,
+    agentId,
+    environment
+  );
   const response = await fetch(agentEndpoint, {
     method: "POST",
     headers: {
@@ -61,9 +68,16 @@ export async function createTaskMcp(
   input: string | { tool: string; args: Record<string, any> },
   nvmApiKey: string,
   planId: string,
-  httpEndpoint: string
+  httpEndpoint: string,
+  agentId: string,
+  environment: string
 ): Promise<{ output: string }> {
-  const { accessToken } = await getAgentAccessToken(nvmApiKey, planId);
+  const { accessToken } = await getAgentAccessToken(
+    nvmApiKey,
+    planId,
+    agentId,
+    environment
+  );
   const transport = new StreamableHTTPClientTransport(new URL(httpEndpoint), {
     requestInit: { headers: { Authorization: `Bearer ${accessToken}` } },
   });
@@ -148,19 +162,21 @@ export async function getUserCredits(
 /** Gets the agent access token for direct calls. */
 export async function getAgentAccessToken(
   nvmApiKey: string,
-  planId: string
+  planId: string,
+  agentId: string,
+  environment: string
 ): Promise<{ accessToken: string; agentId: string }> {
-  const environment = process.env.NVM_ENVIRONMENT || "testing";
-  const agentDid = process.env.AGENT_DID;
-  if (!nvmApiKey || !planId || !agentDid) {
-    throw new Error("Missing config: nvmApiKey, planId, or agentDid");
+  if (!nvmApiKey || !planId || !agentId || !environment) {
+    throw new Error(
+      "Missing config: nvmApiKey, planId, agentId, or environment"
+    );
   }
   const payments = initializePayments(nvmApiKey, environment);
   const agentAccessParams = await payments.agents.getAgentAccessToken(
     planId,
-    agentDid
+    agentId
   );
-  return { accessToken: agentAccessParams.accessToken, agentId: agentDid };
+  return { accessToken: agentAccessParams.accessToken, agentId };
 }
 
 /**
@@ -175,7 +191,9 @@ export async function createTask(
   nvmApiKey: string,
   planId: string,
   mode: "http" | "mcp",
-  httpEndpoint: string
+  httpEndpoint: string,
+  agentId: string,
+  environment: string
 ): Promise<any> {
   if (mode === "http") {
     if (typeof input !== "string") {
@@ -183,18 +201,39 @@ export async function createTask(
         "HTTP agent expects a string input_query. Provide synthesized intent as string."
       );
     }
-    return await createTaskHttp(input, nvmApiKey, planId, httpEndpoint);
+    return await createTaskHttp(
+      input,
+      nvmApiKey,
+      planId,
+      httpEndpoint,
+      agentId,
+      environment
+    );
   }
-  return await createTaskMcp(input, nvmApiKey, planId, httpEndpoint);
+  return await createTaskMcp(
+    input,
+    nvmApiKey,
+    planId,
+    httpEndpoint,
+    agentId,
+    environment
+  );
 }
 
 /** Lists available MCP tools. */
 export async function listMcpTools(
   nvmApiKey: string,
-  planId: string
+  planId: string,
+  agentId: string,
+  environment: string
 ): Promise<any> {
   const mcpEndpoint = process.env.MCP_ENDPOINT || "http://localhost:3001/mcp";
-  const { accessToken } = await getAgentAccessToken(nvmApiKey, planId);
+  const { accessToken } = await getAgentAccessToken(
+    nvmApiKey,
+    planId,
+    agentId,
+    environment
+  );
   const transport = new StreamableHTTPClientTransport(new URL(mcpEndpoint), {
     requestInit: { headers: { Authorization: `Bearer ${accessToken}` } },
   });
@@ -221,10 +260,17 @@ export async function callMcpTool(
   toolName: string,
   args: Record<string, any>,
   nvmApiKey: string,
-  planId: string
+  planId: string,
+  agentId: string,
+  environment: string
 ): Promise<{ output: string; content?: any }> {
   const mcpEndpoint = process.env.MCP_ENDPOINT || "http://localhost:3001/mcp";
-  const { accessToken } = await getAgentAccessToken(nvmApiKey, planId);
+  const { accessToken } = await getAgentAccessToken(
+    nvmApiKey,
+    planId,
+    agentId,
+    environment
+  );
   const transport = new StreamableHTTPClientTransport(new URL(mcpEndpoint), {
     requestInit: { headers: { Authorization: `Bearer ${accessToken}` } },
   });

@@ -17,7 +17,6 @@ import {
   getPlanCostRequest,
 } from "./chat-requests";
 import { buildNeverminedCheckoutUrl } from "./utils";
-import { loadRuntimeConfig } from "@app/config";
 import { useUserState } from "./user-state-context";
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -25,28 +24,65 @@ const ChatContext = createContext<ChatContextType | undefined>(undefined);
 export function ChatProvider({ children }: { children: ReactNode }) {
   const { apiKey, credits, refreshCredits } = useUserState();
   const [messages, setMessages] = useState<FullMessage[]>([]);
+
+  // Debug: Wrap setMessages to track when it's called
+  const debugSetMessages = (
+    newMessages: FullMessage[] | ((prev: FullMessage[]) => FullMessage[])
+  ) => {
+    console.log("[ChatProvider] setMessages called:", {
+      isFunction: typeof newMessages === "function",
+      newCount:
+        typeof newMessages === "function" ? "unknown" : newMessages.length,
+      currentCount: messages.length,
+      stackTrace: new Error().stack,
+    });
+    setMessages(newMessages);
+  };
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<
     number | null
   >(null);
   const [isStoredConversation, setIsStoredConversation] = useState(false);
   const hydratedRef = useRef(false);
+  const loadingRef = useRef(false);
+  const processingPendingActionRef = useRef(false);
 
-  // Debug: log agent id presence on mount
   useEffect(() => {
-    const cfg = loadRuntimeConfig();
-    const agentId = cfg.agentId;
-    console.log("[demo-agent-ui] VITE_AGENT_ID =", agentId);
+    // Determine which agent configuration to use based on transport
+    const transport = (import.meta as any).env?.VITE_TRANSPORT || "http";
+    const agentId =
+      transport === "http"
+        ? (import.meta as any).env?.VITE_HTTP_AGENT_ID ||
+          (import.meta as any).env?.VITE_AGENT_ID ||
+          ""
+        : (import.meta as any).env?.VITE_MCP_AGENT_ID ||
+          (import.meta as any).env?.VITE_AGENT_ID ||
+          "";
+
+    const agentEndpoint =
+      transport === "http"
+        ? (import.meta as any).env?.VITE_HTTP_AGENT_ENDPOINT || ""
+        : (import.meta as any).env?.VITE_MCP_AGENT_ENDPOINT || "";
+
+    const environment = (import.meta as any).env?.VITE_NVM_ENVIRONMENT || "";
+
+    console.log(`[${transport}-agent] agentId =`, agentId);
+    console.log(`[${transport}-agent] agentEndpoint =`, agentEndpoint);
+    console.log(`[${transport}-agent] environment =`, environment);
+
     if (!agentId) {
       console.warn(
-        "[demo-agent-ui] Missing VITE_AGENT_ID - checkout links will not include agent id"
+        `[${transport}-agent] Missing agentId - checkout links will not include agent id`
       );
     }
-    const environment = cfg.environment;
-    console.log("[demo-agent-ui] VITE_NVM_ENVIRONMENT =", environment);
+    if (!agentEndpoint) {
+      console.warn(
+        `[${transport}-agent] Missing agentEndpoint - agent may not work properly`
+      );
+    }
     if (!environment) {
       console.warn(
-        "[demo-agent-ui] Missing VITE_NVM_ENVIRONMENT - checkout links will not include environment"
+        `[${transport}-agent] Missing environment - checkout links will not include environment`
       );
     }
   }, []);
@@ -85,33 +121,42 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     return result;
   };
 
-  const onMessageTypingComplete = () => {
-    // This function is kept for compatibility but no longer needed
-  };
-
   // Keys for localStorage (namespaced per app/transport). Includes migration from legacy keys.
-  const { transport } = loadRuntimeConfig();
+  const transport = (import.meta as any).env?.VITE_TRANSPORT || "http";
   const LS_PREFIX = transport ? `chat_${transport}` : "chat";
   const LS_MESSAGES_KEY = `${LS_PREFIX}_messages`;
   const LS_CONVERSATIONS_KEY = `${LS_PREFIX}_conversations`;
   const LS_CURRENT_CONV_ID_KEY = `${LS_PREFIX}_current_conversation_id`;
   const LEGACY_MESSAGES_KEY = "chat_messages";
-  const LEGACY_CONVERSATIONS_KEY = "chat_conversations";
-  const LEGACY_CURRENT_CONV_ID_KEY = "chat_current_conversation_id";
+
+  useEffect(() => {
+    // Special warning when messages become empty
+    if (messages.length === 0 && hydratedRef.current) {
+      console.warn("[ChatProvider] ⚠️ Messages became empty after hydration!", {
+        stackTrace: new Error().stack,
+      });
+    }
+  }, [messages]);
 
   // Persist messages and conversations on every change
   useEffect(() => {
-    if (!hydratedRef.current) return;
+    if (!hydratedRef.current) {
+      return;
+    }
     try {
       localStorage.setItem(LS_MESSAGES_KEY, JSON.stringify(messages));
-    } catch {}
+    } catch (error) {
+      console.error("[ChatProvider] Error persisting messages:", error);
+    }
   }, [messages]);
 
   useEffect(() => {
     if (!hydratedRef.current) return;
     try {
       localStorage.setItem(LS_CONVERSATIONS_KEY, JSON.stringify(conversations));
-    } catch {}
+    } catch (error) {
+      console.error("[ChatProvider] Error persisting conversations:", error);
+    }
   }, [conversations]);
 
   useEffect(() => {
@@ -125,22 +170,29 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           String(currentConversationId)
         );
       }
-    } catch {}
+    } catch (error) {
+      console.error(
+        "[ChatProvider] Error persisting current conversation ID:",
+        error
+      );
+    }
   }, [currentConversationId]);
 
   // Load from localStorage on first mount; migrate from legacy unscoped keys if present
   useEffect(() => {
+    // Prevent multiple loads during the same session
+    if (hydratedRef.current || loadingRef.current) {
+      return;
+    }
+
+    loadingRef.current = true;
+
     try {
       // Prefer scoped keys; fallback to legacy keys for migration
-      const rawMsgs =
-        localStorage.getItem(LS_MESSAGES_KEY) ||
-        localStorage.getItem(LEGACY_MESSAGES_KEY);
-      const rawConvs =
-        localStorage.getItem(LS_CONVERSATIONS_KEY) ||
-        localStorage.getItem(LEGACY_CONVERSATIONS_KEY);
-      const rawCurrent =
-        localStorage.getItem(LS_CURRENT_CONV_ID_KEY) ||
-        localStorage.getItem(LEGACY_CURRENT_CONV_ID_KEY);
+      const rawMsgs = localStorage.getItem(LS_MESSAGES_KEY);
+      const rawConvs = localStorage.getItem(LS_CONVERSATIONS_KEY);
+      const rawCurrent = localStorage.getItem(LS_CURRENT_CONV_ID_KEY);
+
       const parsedMsgsRaw: FullMessage[] = rawMsgs ? JSON.parse(rawMsgs) : [];
       const parsedMsgs = dedupeMessages(parsedMsgsRaw);
       const parsedConvsRaw: Conversation[] = rawConvs
@@ -152,41 +204,33 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           timestamp: c.timestamp ? new Date(c.timestamp as any) : null,
         }))
       );
-      setMessages(parsedMsgs);
-      setConversations(
-        [...parsedConvs].sort(
-          (a, b) =>
-            (b.timestamp?.getTime() || 0) - (a.timestamp?.getTime() || 0)
-        )
-      );
+
+      // Only set messages if we have some, or if this is the first load
+      if (parsedMsgs.length > 0 || messages.length === 0) {
+        debugSetMessages(parsedMsgs);
+      }
+
+      // Only set conversations if we have some, or if this is the first load
+      if (parsedConvs.length > 0 || conversations.length === 0) {
+        setConversations(
+          [...parsedConvs].sort(
+            (a, b) =>
+              (b.timestamp?.getTime() || 0) - (a.timestamp?.getTime() || 0)
+          )
+        );
+      }
       setCurrentConversationId(rawCurrent ? Number(rawCurrent) : null);
       setIsStoredConversation(
         Boolean(parsedMsgs.length === 0 && parsedConvs.length > 0)
       );
+
       // If we loaded from legacy keys, migrate to scoped keys now
-      try {
-        const loadedFromLegacy =
-          !localStorage.getItem(LS_MESSAGES_KEY) &&
-          localStorage.getItem(LEGACY_MESSAGES_KEY);
-        if (loadedFromLegacy) {
-          localStorage.setItem(LS_MESSAGES_KEY, JSON.stringify(parsedMsgs));
-          localStorage.setItem(
-            LS_CONVERSATIONS_KEY,
-            JSON.stringify(parsedConvsRaw)
-          );
-          if (rawCurrent === null || rawCurrent === undefined) {
-            localStorage.removeItem(LS_CURRENT_CONV_ID_KEY);
-          } else {
-            localStorage.setItem(
-              LS_CURRENT_CONV_ID_KEY,
-              String(Number(rawCurrent))
-            );
-          }
-        }
-      } catch {}
+
       hydratedRef.current = true;
-    } catch {
-      setMessages([]);
+      console.log("[ChatProvider] Hydration completed successfully");
+    } catch (error) {
+      console.error("[ChatProvider] Error loading from localStorage:", error);
+      debugSetMessages([]);
       setConversations(
         [...storedConversations].sort(
           (a, b) =>
@@ -210,7 +254,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
    * @returns {void}
    */
   const clearHistory = (): void => {
-    setMessages([]);
+    debugSetMessages([]);
     setConversations([]);
     setCurrentConversationId(null);
     try {
@@ -218,27 +262,87 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem(LS_CONVERSATIONS_KEY);
       localStorage.removeItem(LS_CURRENT_CONV_ID_KEY);
       localStorage.removeItem("pendingChatAction");
-    } catch {}
+    } catch (error) {
+      console.error("[ChatProvider] Error clearing localStorage:", error);
+    }
+  };
+
+  const onMessageTypingComplete = (): void => {
+    // This function is kept for compatibility but no longer needed
   };
 
   // Resume pending action after returning from checkout
   useEffect(() => {
-    const handler = (e: Event) => {
+    const processPendingAction = () => {
+      try {
+        const pendingAction = localStorage.getItem("pendingChatAction");
+        if (pendingAction) {
+          const action = JSON.parse(pendingAction);
+          if (
+            action.type === "sendMessage" &&
+            typeof action.content === "string"
+          ) {
+            console.log("[ChatProvider] Processing pending action:", action);
+            // Set flag to indicate we're processing a pending action
+            processingPendingActionRef.current = true;
+            // Clear the pending action first to prevent duplicates
+            localStorage.removeItem("pendingChatAction");
+            // Execute the pending action
+            sendMessage(action.content);
+            // Reset flag after a short delay
+            setTimeout(() => {
+              processingPendingActionRef.current = false;
+            }, 1000);
+          }
+        }
+      } catch (error) {
+        console.error(
+          "[ChatProvider] Error processing pending chat action:",
+          error
+        );
+        processingPendingActionRef.current = false;
+      }
+    };
+
+    const resumeHandler = (e: Event) => {
       const detail: any = (e as CustomEvent).detail;
       if (
         detail?.type === "sendMessage" &&
         typeof detail.content === "string"
       ) {
+        console.log("[ChatProvider] Resume handler triggered:", detail);
+        // Clear any existing pending action to prevent duplicates
+        localStorage.removeItem("pendingChatAction");
         // Re-send the original message content
         sendMessage(detail.content);
       }
     };
-    window.addEventListener("resume-chat-action", handler as EventListener);
-    return () =>
+
+    const checkoutReturnHandler = () => {
+      console.log("[ChatProvider] Checkout return handler triggered");
+      // Small delay to ensure the page is fully loaded
+      setTimeout(processPendingAction, 100);
+    };
+
+    window.addEventListener(
+      "resume-chat-action",
+      resumeHandler as EventListener
+    );
+    window.addEventListener(
+      "checkout-return",
+      checkoutReturnHandler as EventListener
+    );
+
+    return () => {
       window.removeEventListener(
         "resume-chat-action",
-        handler as EventListener
+        resumeHandler as EventListener
       );
+      window.removeEventListener(
+        "checkout-return",
+        checkoutReturnHandler as EventListener
+      );
+    };
   }, []);
 
   const sendMessage = async (content: string) => {
@@ -253,7 +357,16 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       conversationId: currentConversationId?.toString() || "new",
       timestamp: new Date(),
     };
-    setMessages((prev) => [...prev, userMessage]);
+    debugSetMessages((prev) => [...prev, userMessage]);
+
+    // If we're processing a pending action, skip credit checks and go directly to agent
+    if (processingPendingActionRef.current) {
+      console.log(
+        "[ChatProvider] Processing pending action - skipping credit checks"
+      );
+      // Continue with the normal flow but skip credit checks
+      // This will be handled in the agent processing section
+    }
 
     // Build LLM history including the latest user message
     const completeMessages = [...messages, userMessage];
@@ -283,9 +396,15 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     // Checkout redirects for explicit router outcomes
     if (llmAction === "no_credit" || llmAction === "order_plan") {
       try {
+        const transport = (import.meta as any).env?.VITE_TRANSPORT || "http";
         const agentId =
-          (import.meta as any).env?.VITE_AGENT_ID ||
-          (globalThis as any)?.__RUNTIME_CONFIG__?.VITE_AGENT_ID;
+          transport === "http"
+            ? (import.meta as any).env?.VITE_HTTP_AGENT_ID ||
+              (import.meta as any).env?.VITE_AGENT_ID ||
+              ""
+            : (import.meta as any).env?.VITE_MCP_AGENT_ID ||
+              (import.meta as any).env?.VITE_AGENT_ID ||
+              "";
         const hasApiKey = Boolean(apiKey);
         const checkoutUrl = buildNeverminedCheckoutUrl(agentId, {
           returnApiKey: !hasApiKey,
@@ -298,7 +417,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         );
 
         // Show a message with a clickable checkout link instead of redirecting
-        setMessages((prev) => [
+        debugSetMessages((prev) => [
           ...prev,
           {
             id: prev.length + 1,
@@ -317,7 +436,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         ]);
         return;
       } catch {
-        setMessages((prev) => [
+        debugSetMessages((prev) => [
           ...prev,
           {
             id: prev.length + 1,
@@ -336,15 +455,27 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     if (llmAction === "forward") {
       const needsApiKey = !apiKey;
       const insufficientCredits = credits !== null && credits <= 0;
-      if (needsApiKey || insufficientCredits) {
+
+      // Skip credit checks if we're processing a pending action (user just returned from checkout)
+      if (processingPendingActionRef.current) {
+        console.log(
+          "[ChatProvider] Skipping credit checks - processing pending action"
+        );
+      } else if (needsApiKey || insufficientCredits) {
         try {
+          const transport = (import.meta as any).env?.VITE_TRANSPORT || "http";
           const agentId =
-            (import.meta as any).env?.VITE_AGENT_ID ||
-            (globalThis as any)?.__RUNTIME_CONFIG__?.VITE_AGENT_ID;
+            transport === "http"
+              ? (import.meta as any).env?.VITE_HTTP_AGENT_ID ||
+                (import.meta as any).env?.VITE_AGENT_ID ||
+                ""
+              : (import.meta as any).env?.VITE_MCP_AGENT_ID ||
+                (import.meta as any).env?.VITE_AGENT_ID ||
+                "";
           const checkoutUrl = buildNeverminedCheckoutUrl(agentId, {
             returnApiKey: needsApiKey,
           });
-          setMessages((prev) => [
+          debugSetMessages((prev) => [
             ...prev,
             {
               id: prev.length + 1,
@@ -363,7 +494,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           );
           return;
         } catch {
-          setMessages((prev) => [
+          debugSetMessages((prev) => [
             ...prev,
             {
               id: prev.length + 1,
@@ -381,7 +512,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
     if (llmAction === "no_action") {
       // Add the LLM's message as an 'answer' type in the chat
-      setMessages((prev) => [
+      debugSetMessages((prev) => [
         ...prev,
         {
           id: prev.length + 1,
@@ -422,7 +553,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         agentPrompt = data.intent;
       } else {
         // Do not fallback to raw content; require synthesized intent
-        setMessages((prev) => [
+        debugSetMessages((prev) => [
           ...prev,
           {
             id: prev.length + 1,
@@ -437,7 +568,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       }
     } catch (e) {
       // Do not fallback to raw content; require synthesized intent
-      setMessages((prev) => [
+      debugSetMessages((prev) => [
         ...prev,
         {
           id: prev.length + 1,
@@ -456,7 +587,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       const blockNumber = await getCurrentBlockNumber();
       // Add temporary thinking message
       const thinkingId = Date.now();
-      setMessages((prev) => [
+      debugSetMessages((prev) => [
         ...prev,
         {
           id: thinkingId,
@@ -470,7 +601,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       const agentResponse = await sendMessageToAgent(agentPrompt);
 
       // Remove thinking message and add the agent's response
-      setMessages((prev) => [
+      debugSetMessages((prev) => [
         ...prev.filter((m) => m.id !== thinkingId),
         {
           id: prev.length + 1,
@@ -484,7 +615,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
       // Handle transaction if present
       if (agentResponse.txHash) {
-        setMessages((prev) => [
+        debugSetMessages((prev) => [
           ...prev,
           {
             id: prev.length + 1,
@@ -508,7 +639,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           const creditsUsed = Number(agentResponse.credits);
           const cost =
             planCredits > 0 ? (planPrice / planCredits) * creditsUsed : 0;
-          setMessages((prev) => [
+          debugSetMessages((prev) => [
             ...prev,
             {
               id: prev.length + 1,
@@ -529,7 +660,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       } catch {}
     } catch (error) {
       console.error(error);
-      setMessages((prev) => [
+      debugSetMessages((prev) => [
         ...prev.filter((m) => m.type !== "thinking"),
         {
           id: prev.length + 1,
@@ -546,7 +677,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const loadStoredMessages = (conversationId: number) => {
     const storedConversationMessages = storedMessages[conversationId];
     if (storedConversationMessages) {
-      setMessages(storedConversationMessages as FullMessage[]);
+      debugSetMessages(storedConversationMessages as FullMessage[]);
       setIsStoredConversation(true);
     }
   };

@@ -1,4 +1,22 @@
 import type { AgentClient, AgentCapabilities } from "@app/domain";
+// Removed loadRuntimeConfig import - using environment variables directly
+
+/**
+ * Gets the stored Plan ID with transport-specific namespacing.
+ * @returns {string} The stored Plan ID or empty string if not present.
+ */
+function getStoredPlanId(): string {
+  try {
+    const transport = "mcp"; // MCP transport is hardcoded for this package
+    const scopedKey = `nvmPlanId_${transport}`;
+    const scopedValue = localStorage.getItem(scopedKey);
+    const legacyValue = localStorage.getItem("nvmPlanId");
+    return scopedValue || legacyValue || "";
+  } catch (error) {
+    console.warn("[transport-mcp] getStoredPlanId error:", error);
+    return "";
+  }
+}
 
 /**
  * MCP transport calling server proxy endpoints for tools and calls.
@@ -13,10 +31,13 @@ export class McpAgentClient implements AgentClient {
 
   private commonHeaders(): HeadersInit {
     const apiKey = localStorage.getItem("nvmApiKey") || "";
-    const planId = localStorage.getItem("nvmPlanId") || "";
+    const transport = "mcp"; // MCP transport is hardcoded for this package
+    const scopedKey = `nvmPlanId_${transport}`;
+    const planId = getStoredPlanId();
     return {
       ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
       ...(planId ? { "X-Plan-Id": planId } : {}),
+      "X-Agent-Mode": transport,
     } as HeadersInit;
   }
 

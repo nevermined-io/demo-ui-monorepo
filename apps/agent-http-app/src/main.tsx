@@ -3,7 +3,6 @@ import { createRoot } from "react-dom/client";
 import "@/index.css";
 import App from "./App";
 import { AgentProvider } from "@app/agent-client";
-import { loadRuntimeConfig } from "@app/config";
 import { HttpAgentClient } from "@app/transport-http";
 import { McpAgentClient } from "@app/transport-mcp";
 
@@ -14,12 +13,11 @@ createRoot(document.getElementById("root")!).render(
 );
 
 function Bootstrap() {
-  const cfg = loadRuntimeConfig();
+  // Read configuration directly from environment variables
+  const transport = (import.meta as any).env?.VITE_TRANSPORT || "http";
   const base = "/";
   const client =
-    cfg.transport === "mcp"
-      ? new McpAgentClient(base)
-      : new HttpAgentClient(base);
+    transport === "mcp" ? new McpAgentClient(base) : new HttpAgentClient(base);
   return (
     <AgentProvider client={client}>
       <App />

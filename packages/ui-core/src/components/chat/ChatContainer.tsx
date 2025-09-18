@@ -27,7 +27,7 @@ import Logo from "./Logo";
 import { Badge } from "@/components/ui/badge";
 import { useUserState } from "@/lib/user-state-context";
 import SettingsModal from "@/components/ui/settings-modal";
-import { loadRuntimeConfig } from "@app/config";
+// Removed loadRuntimeConfig import - using environment variables directly
 import {
   Dialog,
   DialogContent,
@@ -56,7 +56,7 @@ export default function ChatContainer() {
   const hasApiKey = !!apiKey;
 
   // Prepare help modal copy based on transport (http vs mcp)
-  const { transport } = loadRuntimeConfig();
+  const transport = (import.meta as any).env?.VITE_TRANSPORT || "http";
   const isMcp = transport === "mcp";
   const appTitle = isMcp ? "Weather Agent" : "Financial Advisor AI";
   const helpTitle = isMcp

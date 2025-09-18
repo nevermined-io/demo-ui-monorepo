@@ -21,7 +21,7 @@ export async function llmRouter(
     (lastHistoryItem as any).content === message
       ? safeHistory.slice(0, -1)
       : safeHistory;
-  const systemContent = `${basePrompt}\n\nConversation history (for context):\n${JSON.stringify(priorHistory)}`;
+  const systemContent = `${basePrompt}\n\nConversation history (for context):\n${JSON.stringify(priorHistory)}\n\nUser credits: ${credits}`;
   const completion = await openai.chat.completions.create({
     model: "gpt-4.1",
     messages: [

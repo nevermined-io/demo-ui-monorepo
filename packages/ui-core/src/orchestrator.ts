@@ -21,7 +21,7 @@ export class ConversationOrchestrator {
   }> {
     const cfg = loadRuntimeConfig();
     const opts: { agentType?: string; transport?: string } = {};
-    if (cfg.agentId) opts.agentType = "default";
+    if (cfg.agent.id) opts.agentType = "default";
     if (cfg.transport) opts.transport = String(cfg.transport);
     const prompts = new FilePromptProvider(opts);
     await prompts.getRouterPrompt();
