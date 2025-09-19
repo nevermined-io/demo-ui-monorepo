@@ -30,19 +30,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const { apiKey, credits, refreshCredits } = useUserState();
   const [messages, setMessages] = useState<FullMessage[]>([]);
 
-  // Debug: Wrap setMessages to track when it's called
-  const debugSetMessages = (
-    newMessages: FullMessage[] | ((prev: FullMessage[]) => FullMessage[])
-  ) => {
-    console.log("[ChatProvider] setMessages called:", {
-      isFunction: typeof newMessages === "function",
-      newCount:
-        typeof newMessages === "function" ? "unknown" : newMessages.length,
-      currentCount: messages.length,
-      stackTrace: new Error().stack,
-    });
-    setMessages(newMessages);
-  };
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<
     number | null
@@ -70,10 +57,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         : (import.meta as any).env?.VITE_MCP_AGENT_ENDPOINT || "";
 
     const environment = (import.meta as any).env?.VITE_NVM_ENVIRONMENT || "";
-
-    console.log(`[${transport}-agent] agentId =`, agentId);
-    console.log(`[${transport}-agent] agentEndpoint =`, agentEndpoint);
-    console.log(`[${transport}-agent] environment =`, environment);
 
     if (!agentId) {
       console.warn(
@@ -132,7 +115,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const LS_MESSAGES_KEY = `${LS_PREFIX}_messages`;
   const LS_CONVERSATIONS_KEY = `${LS_PREFIX}_conversations`;
   const LS_CURRENT_CONV_ID_KEY = `${LS_PREFIX}_current_conversation_id`;
-  const LEGACY_MESSAGES_KEY = "chat_messages";
 
   useEffect(() => {
     // Special warning when messages become empty
@@ -212,7 +194,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
       // Only set messages if we have some, or if this is the first load
       if (parsedMsgs.length > 0 || messages.length === 0) {
-        debugSetMessages(parsedMsgs);
+        setMessages(parsedMsgs);
       }
 
       // Only set conversations if we have some, or if this is the first load
@@ -232,10 +214,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       // If we loaded from legacy keys, migrate to scoped keys now
 
       hydratedRef.current = true;
-      console.log("[ChatProvider] Hydration completed successfully");
     } catch (error) {
       console.error("[ChatProvider] Error loading from localStorage:", error);
-      debugSetMessages([]);
+      setMessages([]);
       setConversations(
         [...storedConversations].sort(
           (a, b) =>
@@ -259,7 +240,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
    * @returns {void}
    */
   const clearHistory = (): void => {
-    debugSetMessages([]);
+    setMessages([]);
     setConversations([]);
     setCurrentConversationId(null);
     try {
@@ -287,7 +268,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
             action.type === "sendMessage" &&
             typeof action.content === "string"
           ) {
-            console.log("[ChatProvider] Processing pending action:", action);
             // Set flag to indicate we're processing a pending action
             processingPendingActionRef.current = true;
             // Clear the pending action first to prevent duplicates
@@ -315,7 +295,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         detail?.type === "sendMessage" &&
         typeof detail.content === "string"
       ) {
-        console.log("[ChatProvider] Resume handler triggered:", detail);
         // Clear any existing pending action to prevent duplicates
         localStorage.removeItem("pendingChatAction");
         // Re-send the original message content
@@ -324,7 +303,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     };
 
     const checkoutReturnHandler = () => {
-      console.log("[ChatProvider] Checkout return handler triggered");
       // Small delay to ensure the page is fully loaded
       setTimeout(processPendingAction, 100);
     };
@@ -365,16 +343,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       conversationId: currentConversationId?.toString() || "new",
       timestamp: new Date(),
     };
-    debugSetMessages((prev) => [...prev, userMessage]);
-
-    // If we're processing a pending action, skip credit checks and go directly to agent
-    if (processingPendingActionRef.current) {
-      console.log(
-        "[ChatProvider] Processing pending action - skipping credit checks"
-      );
-      // Continue with the normal flow but skip credit checks
-      // This will be handled in the agent processing section
-    }
+    setMessages((prev) => [...prev, userMessage]);
 
     // Build LLM history including the latest user message
     const completeMessages = [...messages, userMessage];
@@ -425,7 +394,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         );
 
         // Show a message with a clickable checkout link instead of redirecting
-        debugSetMessages((prev) => [
+        setMessages((prev) => [
           ...prev,
           {
             id: prev.length + 1,
@@ -444,7 +413,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         ]);
         return;
       } catch {
-        debugSetMessages((prev) => [
+        setMessages((prev) => [
           ...prev,
           {
             id: prev.length + 1,
@@ -465,11 +434,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       const insufficientCredits = credits !== null && credits <= 0;
 
       // Skip credit checks if we're processing a pending action (user just returned from checkout)
-      if (processingPendingActionRef.current) {
-        console.log(
-          "[ChatProvider] Skipping credit checks - processing pending action"
-        );
-      } else if (needsApiKey || insufficientCredits) {
+      if (
+        !processingPendingActionRef.current &&
+        (needsApiKey || insufficientCredits)
+      ) {
         try {
           const transport = (import.meta as any).env?.VITE_TRANSPORT || "http";
           const agentId =
@@ -483,7 +451,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           const checkoutUrl = buildNeverminedCheckoutUrl(agentId, {
             returnApiKey: needsApiKey,
           });
-          debugSetMessages((prev) => [
+          setMessages((prev) => [
             ...prev,
             {
               id: prev.length + 1,
@@ -502,7 +470,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           );
           return;
         } catch {
-          debugSetMessages((prev) => [
+          setMessages((prev) => [
             ...prev,
             {
               id: prev.length + 1,
@@ -520,7 +488,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
     if (llmAction === "no_action") {
       // Add the LLM's message as an 'answer' type in the chat
-      debugSetMessages((prev) => [
+      setMessages((prev) => [
         ...prev,
         {
           id: prev.length + 1,
@@ -588,7 +556,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         agentPrompt = data;
       } else {
         // Do not fallback to raw content; require synthesized intent
-        debugSetMessages((prev) => [
+        setMessages((prev) => [
           ...prev,
           {
             id: prev.length + 1,
@@ -603,7 +571,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       }
     } catch (e) {
       // Do not fallback to raw content; require synthesized intent
-      debugSetMessages((prev) => [
+      setMessages((prev) => [
         ...prev,
         {
           id: prev.length + 1,
@@ -618,11 +586,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      // Send message to the new agent
-      const blockNumber = await getCurrentBlockNumber();
-      // Add temporary thinking message
       const thinkingId = Date.now();
-      debugSetMessages((prev) => [
+      setMessages((prev) => [
         ...prev,
         {
           id: thinkingId,
@@ -648,7 +613,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       }
 
       // Remove thinking message and add the agent's response
-      debugSetMessages((prev) => [
+      setMessages((prev) => [
         ...prev.filter((m) => m.id !== thinkingId),
         {
           id: prev.length + 1,
@@ -671,7 +636,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           txHash: string;
           credits: number;
         };
-        debugSetMessages((prev) => [
+        setMessages((prev) => [
           ...prev,
           {
             id: prev.length + 1,
@@ -695,7 +660,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           const creditsUsed = Number(httpResponse.credits);
           const cost =
             planCredits > 0 ? (planPrice / planCredits) * creditsUsed : 0;
-          debugSetMessages((prev) => [
+          setMessages((prev) => [
             ...prev,
             {
               id: prev.length + 1,
@@ -716,7 +681,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       } catch {}
     } catch (error) {
       console.error(error);
-      debugSetMessages((prev) => [
+      setMessages((prev) => [
         ...prev.filter((m) => m.type !== "thinking"),
         {
           id: prev.length + 1,
@@ -733,7 +698,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const loadStoredMessages = (conversationId: number) => {
     const storedConversationMessages = storedMessages[conversationId];
     if (storedConversationMessages) {
-      debugSetMessages(storedConversationMessages as FullMessage[]);
+      setMessages(storedConversationMessages as FullMessage[]);
       setIsStoredConversation(true);
     }
   };

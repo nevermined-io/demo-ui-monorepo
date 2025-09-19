@@ -71,7 +71,7 @@ export async function createTaskMcp(
   httpEndpoint: string,
   agentId: string,
   environment: string
-): Promise<{ output: string }> {
+): Promise<{ output: string } & Record<string, any>> {
   const { accessToken } = await getAgentAccessToken(
     nvmApiKey,
     planId,
@@ -121,7 +121,14 @@ export async function createTaskMcp(
     }
     if (!outputText)
       outputText = typeof result === "string" ? result : JSON.stringify(result);
-    return { output: outputText };
+    const metadata =
+      result && typeof result === "object"
+        ? (result as any).metadata
+        : undefined;
+    if (metadata && typeof metadata === "object") {
+      return { output: outputText, redemptionResult: metadata };
+    }
+    return { output: outputText, redemptionResult: undefined };
   } finally {
     try {
       await client.close();

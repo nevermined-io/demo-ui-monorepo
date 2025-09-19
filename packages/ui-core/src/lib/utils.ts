@@ -119,10 +119,6 @@ export function getPlanIdStorageKey(): string {
   try {
     // Get transport from environment variables (same as other parts of the codebase)
     const transport = (import.meta as any).env?.VITE_TRANSPORT || "http";
-    console.log(
-      "[getPlanIdStorageKey] transport from VITE_TRANSPORT:",
-      transport
-    );
     return `nvmPlanId_${transport}`;
   } catch (error) {
     console.warn("[getPlanIdStorageKey] Error getting transport:", error);
@@ -138,15 +134,8 @@ export function getPlanIdStorageKey(): string {
 export function getStoredPlanId(): string {
   try {
     const scopedKey = getPlanIdStorageKey();
-    console.log("[getStoredPlanId] scopedKey:", scopedKey);
     const scopedValue = localStorage.getItem(scopedKey);
     const legacyValue = localStorage.getItem("nvmPlanId");
-    console.log(
-      "[getStoredPlanId] scopedValue:",
-      scopedValue,
-      "legacyValue:",
-      legacyValue
-    );
     return scopedValue || legacyValue || "";
   } catch (error) {
     console.warn("[getStoredPlanId] Error:", error);
@@ -163,9 +152,7 @@ export function getStoredPlanId(): string {
 export function setStoredPlanId(planId: string): void {
   try {
     const scopedKey = getPlanIdStorageKey();
-    console.log("[setStoredPlanId] scopedKey:", scopedKey, "planId:", planId);
     localStorage.setItem(scopedKey, planId);
-    console.log("[setStoredPlanId] Successfully stored planId in", scopedKey);
   } catch (error) {
     console.warn("[setStoredPlanId] Error:", error);
   }
