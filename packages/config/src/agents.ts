@@ -1,4 +1,4 @@
-import type { AgentConfig, EnvConfig } from "./types";
+import type { AgentConfig, EnvConfig } from "./types.js";
 
 /**
  * Default agent configurations

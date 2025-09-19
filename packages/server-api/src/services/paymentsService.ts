@@ -1,11 +1,11 @@
 import { Payments, type EnvironmentName } from "@nevermined-io/payments";
-import { PlanDDOHelper } from "./planDDOHelper";
+import { PlanDDOHelper } from "./planDDOHelper.js";
 import {
   hasSufficientERC20Balance,
   findMintEvent,
   getCurrentBlockNumber,
   findBurnEvent,
-} from "./blockchainService";
+} from "./blockchainService.js";
 import { Client as McpClient } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 

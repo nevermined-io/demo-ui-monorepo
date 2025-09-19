@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { loadPrompt } from "./promptService";
+import { loadPrompt } from "./promptService.js";
 
 /**
  * Calls the LLM to decide what to do with a user message before sending to the agent.

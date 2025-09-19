@@ -195,7 +195,8 @@ export function createServer(): express.Express {
     if (fs.existsSync(demoDistDir)) {
       app.use(express.static(demoDistDir));
     }
-    // Always register root and fallback to show helpful error if not built
+
+    // Serve demo app index.html for root and fallback routes
     app.get(["/", ""], (_req: Request, res: Response) => {
       if (fs.existsSync(demoIndexHtml)) {
         res.setHeader("Content-Type", "text/html; charset=utf-8");
@@ -204,13 +205,17 @@ export function createServer(): express.Express {
       }
       res.status(500).send("Demo app not built. Please run its build first.");
     });
+
     // Fallback for any non-app, non-API route to serve Demo index.html
+    // But exclude static assets and other specific paths
     app.get("*", (_req: Request, res: Response, next) => {
       const p = _req.path || "/";
       if (
         p.startsWith(httpBase) ||
         p.startsWith(mcpBase) ||
         p.startsWith("/api") ||
+        p.startsWith("/assets/") ||
+        p.startsWith("/vite.svg") ||
         p === "/config.js"
       ) {
         return next();

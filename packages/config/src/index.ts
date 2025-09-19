@@ -1,5 +1,5 @@
-import type { RuntimeConfig, AgentConfig } from "./types";
-import { loadAgentConfig } from "./agents";
+import type { RuntimeConfig, AgentConfig } from "./types.js";
+import { loadAgentConfig } from "./agents.js";
 
 /**
  * Loads runtime configuration from environment variables and window globals.
@@ -85,5 +85,9 @@ export function buildNeverminedCheckoutUrl(
 }
 
 // Re-export types and functions
-export type { RuntimeConfig, AgentConfig } from "./types";
-export { loadAgentConfig, loadAllAgentConfigs, getAgentById } from "./agents";
+export type { RuntimeConfig, AgentConfig } from "./types.js";
+export {
+  loadAgentConfig,
+  loadAllAgentConfigs,
+  getAgentById,
+} from "./agents.js";

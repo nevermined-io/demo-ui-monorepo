@@ -4,7 +4,7 @@ import {
   llmRouter,
   llmTitleSummarizer,
   llmIntentSynthesizer,
-} from "./services/llmService";
+} from "./services/llmService.js";
 import {
   getUserCredits,
   createTask,
@@ -15,9 +15,12 @@ import {
   redeemCredits,
   listMcpTools,
   callMcpTool,
-} from "./services/paymentsService";
-import { getCurrentBlockNumber } from "./services/blockchainService";
-import { loadAgentPrompt, loadLLMRouterPrompt } from "./services/promptService";
+} from "./services/paymentsService.js";
+import { getCurrentBlockNumber } from "./services/blockchainService.js";
+import {
+  loadAgentPrompt,
+  loadLLMRouterPrompt,
+} from "./services/promptService.js";
 import { loadAgentConfig } from "@app/config";
 
 /**
@@ -414,7 +417,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   return httpServer;
 }
 
-export * from "./services/llmService";
-export * from "./services/paymentsService";
-export * from "./services/blockchainService";
-export * from "./services/promptService";
+export * from "./services/llmService.js";
+export * from "./services/paymentsService.js";
+export * from "./services/blockchainService.js";
+export * from "./services/promptService.js";
