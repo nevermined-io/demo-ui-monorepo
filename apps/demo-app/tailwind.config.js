@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
-const uiCorePreset = require("../../packages/ui-core/tailwind.preset.cjs");
+const { Sidebar } = require("lucide-react")
+const uiCorePreset = require("../../packages/ui-core/tailwind.preset.cjs")
 
 module.exports = {
   darkMode: ["class"],
@@ -9,14 +10,23 @@ module.exports = {
     "../../packages/ui-core/src/**/*.{js,jsx,ts,tsx}",
   ],
   presets: [uiCorePreset],
+  safelist: [
+    {
+      pattern: /.*/,
+    },
+  ],
   theme: {
     extend: {
       colors: {
+        limeCustom: "#D7F771",
+        mintCustom: "#B0E4D0",
+        nvmGreen: "#0D3F48",
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
+        "sidebar-active-bg": "#285F62",
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
@@ -54,4 +64,4 @@ module.exports = {
     },
   },
   plugins: [],
-};
+}

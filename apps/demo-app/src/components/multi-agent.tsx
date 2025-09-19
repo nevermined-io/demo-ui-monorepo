@@ -17,7 +17,7 @@ const MultiAgent = () => {
         </div>
 
         {/* Tags */}
-        <div className="flex flex-wrap gap-2 max-w-[450px]">
+        <div className="flex flex-wrap gap-2 max-w-96">
           <Badge
             variant="secondary"
             className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100"

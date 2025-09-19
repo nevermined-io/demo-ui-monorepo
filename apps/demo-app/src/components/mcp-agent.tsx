@@ -1,4 +1,47 @@
 import { Badge } from "./ui/badge"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "./ui/tooltip"
+
+const badges = [
+  {
+    label: "Fiat Payment",
+    className: "bg-yellow-100 text-yellow-800 hover:bg-yellow-100",
+    tooltip:
+      "the payment of the Plan is done in Fiat (USD) via Stripe integration",
+  },
+  {
+    label: "Typescript",
+    className: "bg-blue-100 text-blue-800 hover:bg-blue-100",
+    tooltip: "the example is implemented using Typescript",
+  },
+  {
+    label: "Python",
+    className: "bg-green-100 text-green-800 hover:bg-green-100",
+    tooltip: "the example is implemented using Python",
+  },
+  {
+    label: "Fixed Cost",
+    className: "bg-purple-100 text-purple-800 hover:bg-purple-100",
+    tooltip:
+      "the cost resulting for each request sent to the AI Agent is fixed (i.e $0.01)",
+  },
+  {
+    label: "Mcp",
+    className: "bg-pink-100 text-pink-800 hover:bg-pink-100",
+    tooltip:
+      "the AI Agent of the example is implemented using Model Context Protocol (MCP)",
+  },
+  {
+    label: "Observability",
+    className: "bg-orange-100 text-orange-800 hover:bg-orange-100",
+    tooltip:
+      "the AI Agent tracks all the internal requests sent to the LLMs used for further analysis",
+  },
+]
 
 const McpAgent = () => {
   return (
@@ -15,43 +58,21 @@ const McpAgent = () => {
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-2 max-w-[300px]">
-          <Badge
-            variant="secondary"
-            className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100"
-          >
-            Fiat Payment
-          </Badge>
-          <Badge
-            variant="secondary"
-            className="bg-blue-100 text-blue-800 hover:bg-blue-100"
-          >
-            Typescript
-          </Badge>
-          <Badge
-            variant="secondary"
-            className="bg-green-100 text-green-800 hover:bg-green-100"
-          >
-            Python
-          </Badge>
-          <Badge
-            variant="secondary"
-            className="bg-purple-100 text-purple-800 hover:bg-purple-100"
-          >
-            Fixed Cost
-          </Badge>
-          <Badge
-            variant="secondary"
-            className="bg-orange-100 text-orange-800 hover:bg-orange-100"
-          >
-            Mcp
-          </Badge>
-          <Badge
-            variant="secondary"
-            className="bg-orange-100 text-orange-800 hover:bg-orange-100"
-          >
-            Observability
-          </Badge>
+        <div className="flex flex-wrap gap-2 max-w-72">
+          <TooltipProvider>
+            <div className="flex flex-wrap gap-2 max-w-[250px]">
+              {badges.map(({ label, className, tooltip }) => (
+                <Tooltip key={label}>
+                  <TooltipTrigger asChild className="cursor-pointer">
+                    <Badge className={className}>{label}</Badge>
+                  </TooltipTrigger>
+                  <TooltipContent className="bg-nvmGreen text-white max-w-60">
+                    <p>{tooltip}</p>
+                  </TooltipContent>
+                </Tooltip>
+              ))}
+            </div>
+          </TooltipProvider>
         </div>
 
         {/* Tags */}
