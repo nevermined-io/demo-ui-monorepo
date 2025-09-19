@@ -20,6 +20,7 @@ module.exports = {
       colors: {
         limeCustom: "#D7F771",
         mintCustom: "#B0E4D0",
+        nvmGreen: "#0D3F48",
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
