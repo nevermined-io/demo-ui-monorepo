@@ -37,7 +37,7 @@ function App() {
       <div className="flex-1 ml-64">
         <div className="flex items-center justify-between px-6 h-20 border-b">
           <h1 className="text-2xl font-semibold text-gray-800">
-            {Title[view]} Agent
+            {Title[view]} Agent.
           </h1>
           <div className="flex items-center gap-3">
             <Button
