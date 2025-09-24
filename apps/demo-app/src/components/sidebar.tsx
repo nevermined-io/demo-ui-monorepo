@@ -9,51 +9,62 @@ interface Props {
 
 const Sidebar = ({ setView, view }: Props) => {
   return (
-    <div className="w-64 bg-[#0D3F48] text-white p-6 flex flex-col fixed top-0 left-0 min-h-screen">
-      {/* Logo */}
+    <div className="w-64 bg-[#0D3F48] text-white p-6 flex flex-col fixed top-0 left-0 min-h-screen overflow-hidden">
+      {/* Pattern Background */}
+      <img
+        src="/pattern.png"
+        className="h-72 w-40 top-0 right-0 absolute pointer-events-none z-0"
+        alt="Pattern"
+      />
 
-      <img src="/pattern.png" className="h-72 w-40 top-0 right-0 absolute" />
+      {/* Content Container - ensures content is above the pattern */}
+      <div className="relative z-10 flex flex-col h-full">
+        {/* Logo */}
+        <div className="flex items-center gap-2 mb-8">
+          <img src="/logo.svg" alt="Logo" />
+        </div>
 
-      <div className="flex items-center gap-2 mb-8  ">
-        <img src="/logo.svg" />
-      </div>
+        {/* Navigation */}
+        <div className="space-y-2 mt-12">
+          <h3 className="text-sm font-medium mb-4 ml-3 bg-gradient-to-r from-limeCustom to-mintCustom bg-clip-text text-transparent">
+            Example applications
+          </h3>
 
-      {/* Navigation */}
-      <div className="space-y-2 mt-12">
-        <h3 className="text-sm font-medium mb-4 ml-3 bg-gradient-to-r from-limeCustom to-mintCustom bg-clip-text text-transparent">
-          Example applications
-        </h3>
+          <div className="space-y-1">
+            <div
+              className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors hover:bg-opacity-80 ${
+                view === "simple"
+                  ? "bg-sidebar-active-bg"
+                  : "hover:bg-white hover:bg-opacity-10"
+              }`}
+              onClick={() => setView("simple")}
+            >
+              <WalletCards className="w-4 h-4 flex-shrink-0" />
+              <span className="text-sm">Simple Agent</span>
+            </div>
 
-        <div className="space-y-1">
-          <div
-            className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer ${
-              view === "simple" && "bg-sidebar-active-bg"
-            }`}
-            onClick={() => setView("simple")}
-          >
-            <WalletCards className="w-4 h-4" />
-            <span className="text-sm">Simple Agent</span>
+            <div
+              className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors hover:bg-opacity-80 ${
+                view === "mcp"
+                  ? "bg-sidebar-active-bg"
+                  : "hover:bg-white hover:bg-opacity-10"
+              }`}
+              onClick={() => setView("mcp")}
+            >
+              <CloudSunRain className="w-4 h-4 flex-shrink-0" />
+              <span className="text-sm">MCP Agent</span>
+            </div>
+
+            {/* <div
+              className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors hover:bg-opacity-80 ${
+                view === "multi" ? "bg-sidebar-active-bg" : "hover:bg-white hover:bg-opacity-10"
+              }`}
+              onClick={() => setView("multi")}
+            >
+              <Youtube className="w-4 h-4 flex-shrink-0" />
+              <span className="text-sm">Multi-Agent System</span>
+            </div> */}
           </div>
-
-          <div
-            className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer ${
-              view === "mcp" && "bg-sidebar-active-bg"
-            }`}
-            onClick={() => setView("mcp")}
-          >
-            <CloudSunRain className="w-4 h-4" />
-            <span className="text-sm">MCP Agent</span>
-          </div>
-
-          {/* <div
-            className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer ${
-              view === "multi" && "bg-sidebar-active-bg"
-            }`}
-            onClick={() => setView("multi")}
-          >
-            <Youtube className="w-4 h-4" />
-            <span className="text-sm">Multi-Agent System</span>
-          </div> */}
         </div>
       </div>
     </div>
