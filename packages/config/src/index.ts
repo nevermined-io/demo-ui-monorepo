@@ -24,10 +24,7 @@ export function loadRuntimeConfig(req?: any): RuntimeConfig {
     id: fromWindow.agentId || agent.id,
     name: fromWindow.agentName || agent.name,
     endpoint: fromWindow.endpoint || agent.endpoint,
-    environment:
-      fromWindow.environment ||
-      fromWindow.VITE_NVM_ENVIRONMENT ||
-      agent.environment,
+    environment: fromWindow.environment || agent.environment,
   };
 
   return {

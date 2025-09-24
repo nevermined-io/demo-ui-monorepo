@@ -35,8 +35,4 @@ export interface EnvConfig {
   // Common
   NVM_ENVIRONMENT?: string;
   TRANSPORT?: "http" | "mcp";
-
-  // Legacy support
-  AGENT_DID?: string;
-  VITE_NVM_ENVIRONMENT?: string;
 }
