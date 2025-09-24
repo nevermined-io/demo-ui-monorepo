@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { getTransport } from "./config";
 // Removed loadRuntimeConfig import - using environment variables directly
 
 export function cn(...inputs: ClassValue[]) {
@@ -118,7 +119,7 @@ export function buildLocalCheckoutLink(
 export function getPlanIdStorageKey(): string {
   try {
     // Get transport from environment variables (same as other parts of the codebase)
-    const transport = (import.meta as any).env?.VITE_TRANSPORT || "http";
+    const transport = getTransport();
     return `nvmPlanId_${transport}`;
   } catch (error) {
     console.warn("[getPlanIdStorageKey] Error getting transport:", error);

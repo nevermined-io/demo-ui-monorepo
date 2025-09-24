@@ -6,19 +6,6 @@ import path from "path";
 export default defineConfig({
   plugins: [react()],
   base: "/mcp-agent/",
-  define: {
-    // Define environment variables for MCP agent
-    "import.meta.env.VITE_TRANSPORT": '"mcp"',
-    "import.meta.env.VITE_MCP_AGENT_ID": JSON.stringify(
-      process.env.MCP_AGENT_ID || ""
-    ),
-    "import.meta.env.VITE_MCP_AGENT_ENDPOINT": JSON.stringify(
-      process.env.MCP_AGENT_ENDPOINT || ""
-    ),
-    "import.meta.env.VITE_NVM_ENVIRONMENT": JSON.stringify(
-      process.env.NVM_ENVIRONMENT || ""
-    ),
-  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "../../packages/ui-core/src"),

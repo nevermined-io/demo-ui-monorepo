@@ -23,16 +23,40 @@ export function createServer(): express.Express {
   } catch {}
 
   // Runtime config: exposes window.__RUNTIME_CONFIG__
-  app.get("/config.js", (_req: Request, res: Response) => {
-    const agentId = process.env.AGENT_DID || process.env.VITE_AGENT_ID || "";
-    const environment =
-      process.env.VITE_NVM_ENVIRONMENT ||
-      process.env.NVM_ENVIRONMENT ||
-      "sandbox";
+  app.get("/config.js", (req: Request, res: Response) => {
+    // Determine transport based on the referer header or default to HTTP
+    const referer = req.get("Referer") || "";
+    const isMcpApp = referer.includes("/mcp-agent");
+
+    let transport = "http";
+    let agentId = "";
+    let agentEndpoint = "";
+
+    if (isMcpApp) {
+      transport = "mcp";
+      agentId = process.env.MCP_AGENT_ID || "";
+      agentEndpoint = process.env.MCP_AGENT_ENDPOINT || "";
+    } else {
+      // Default to HTTP app
+      transport = "http";
+      agentId = process.env.HTTP_AGENT_ID || "";
+      agentEndpoint = process.env.HTTP_AGENT_ENDPOINT || "";
+    }
+
+    const environment = process.env.NVM_ENVIRONMENT || "sandbox";
+
     const body =
-      "window.__RUNTIME_CONFIG__ = Object.assign({}, window.__RUNTIME_CONFIG__, { VITE_AGENT_ID: " +
+      "window.__RUNTIME_CONFIG__ = Object.assign({}, window.__RUNTIME_CONFIG__, { " +
+      "transport: " +
+      JSON.stringify(transport) +
+      ", " +
+      "agentId: " +
       JSON.stringify(agentId) +
-      ", VITE_NVM_ENVIRONMENT: " +
+      ", " +
+      "agentEndpoint: " +
+      JSON.stringify(agentEndpoint) +
+      ", " +
+      "environment: " +
       JSON.stringify(environment) +
       " });";
     res.setHeader("Content-Type", "application/javascript; charset=utf-8");
@@ -48,7 +72,6 @@ export function createServer(): express.Express {
   const landingAppDir = path.resolve(repoRoot, "apps/landing-app");
   const httpBase = "/simple-agent";
   const mcpBase = "/mcp-agent";
-  const landingBase = "/";
   const demoAppDir = path.resolve(repoRoot, "apps/demo-app");
 
   // Minimal landing page at /, served via Vite in dev and static in prod

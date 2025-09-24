@@ -8,7 +8,6 @@ import {
 } from "react";
 import { FullMessage, ChatContextType } from "./chat-types";
 import {
-  getCurrentBlockNumber,
   sendMessageToAgent,
   listMcpToolsClient,
   callMcpToolClient,
@@ -23,11 +22,13 @@ import {
 } from "./chat-requests";
 import { buildNeverminedCheckoutUrl } from "./utils";
 import { useUserState } from "./user-state-context";
+import { useAppConfig } from "./config";
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 export function ChatProvider({ children }: { children: ReactNode }) {
   const { apiKey, credits, refreshCredits } = useUserState();
+  const appConfig = useAppConfig();
   const [messages, setMessages] = useState<FullMessage[]>([]);
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -40,23 +41,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const processingPendingActionRef = useRef(false);
 
   useEffect(() => {
-    // Determine which agent configuration to use based on transport
-    const transport = (import.meta as any).env?.VITE_TRANSPORT || "http";
-    const agentId =
-      transport === "http"
-        ? (import.meta as any).env?.VITE_HTTP_AGENT_ID ||
-          (import.meta as any).env?.VITE_AGENT_ID ||
-          ""
-        : (import.meta as any).env?.VITE_MCP_AGENT_ID ||
-          (import.meta as any).env?.VITE_AGENT_ID ||
-          "";
-
-    const agentEndpoint =
-      transport === "http"
-        ? (import.meta as any).env?.VITE_HTTP_AGENT_ENDPOINT || ""
-        : (import.meta as any).env?.VITE_MCP_AGENT_ENDPOINT || "";
-
-    const environment = (import.meta as any).env?.VITE_NVM_ENVIRONMENT || "";
+    // Use the centralized configuration system
+    const { transport, agentId, agentEndpoint, environment } = appConfig;
 
     if (!agentId) {
       console.warn(
@@ -73,7 +59,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         `[${transport}-agent] Missing environment - checkout links will not include environment`
       );
     }
-  }, []);
+  }, [appConfig]);
 
   // Deduplicate helpers
   const dedupeMessages = (items: FullMessage[]): FullMessage[] => {
@@ -110,7 +96,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   };
 
   // Keys for localStorage (namespaced per app/transport). Includes migration from legacy keys.
-  const transport = (import.meta as any).env?.VITE_TRANSPORT || "http";
+  const { transport } = appConfig;
   const LS_PREFIX = transport ? `chat_${transport}` : "chat";
   const LS_MESSAGES_KEY = `${LS_PREFIX}_messages`;
   const LS_CONVERSATIONS_KEY = `${LS_PREFIX}_conversations`;
@@ -373,15 +359,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     // Checkout redirects for explicit router outcomes
     if (llmAction === "no_credit" || llmAction === "order_plan") {
       try {
-        const transport = (import.meta as any).env?.VITE_TRANSPORT || "http";
-        const agentId =
-          transport === "http"
-            ? (import.meta as any).env?.VITE_HTTP_AGENT_ID ||
-              (import.meta as any).env?.VITE_AGENT_ID ||
-              ""
-            : (import.meta as any).env?.VITE_MCP_AGENT_ID ||
-              (import.meta as any).env?.VITE_AGENT_ID ||
-              "";
+        const { agentId } = appConfig;
         const hasApiKey = Boolean(apiKey);
         const checkoutUrl = buildNeverminedCheckoutUrl(agentId, {
           returnApiKey: !hasApiKey,
@@ -439,15 +417,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         (needsApiKey || insufficientCredits)
       ) {
         try {
-          const transport = (import.meta as any).env?.VITE_TRANSPORT || "http";
-          const agentId =
-            transport === "http"
-              ? (import.meta as any).env?.VITE_HTTP_AGENT_ID ||
-                (import.meta as any).env?.VITE_AGENT_ID ||
-                ""
-              : (import.meta as any).env?.VITE_MCP_AGENT_ID ||
-                (import.meta as any).env?.VITE_AGENT_ID ||
-                "";
+          const { agentId } = appConfig;
           const checkoutUrl = buildNeverminedCheckoutUrl(agentId, {
             returnApiKey: needsApiKey,
           });
@@ -526,7 +496,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     let mcpToolCall: { tool: string; args: Record<string, any> } | null = null;
 
     // For MCP transport, negotiate with MCP tools before intent synthesis
-    const transport = (import.meta as any).env?.VITE_TRANSPORT || "http";
+    const { transport } = appConfig;
     let toolsCatalog: any | undefined = undefined;
 
     if (transport === "mcp") {

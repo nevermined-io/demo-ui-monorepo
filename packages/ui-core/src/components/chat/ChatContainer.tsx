@@ -1,5 +1,6 @@
 import { useChat } from "@/lib/chat-context";
 import type { FullMessage } from "@/lib/chat-types";
+import { useAppConfig } from "@/lib/config";
 import MessageGroup from "./MessageGroup";
 import ChatInput from "./ChatInput";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -56,7 +57,7 @@ export default function ChatContainer() {
   const hasApiKey = !!apiKey;
 
   // Prepare help modal copy based on transport (http vs mcp)
-  const transport = (import.meta as any).env?.VITE_TRANSPORT || "http";
+  const { transport } = useAppConfig();
   const isMcp = transport === "mcp";
   const appTitle = isMcp ? "Weather Agent" : "Financial Advisor AI";
   const helpTitle = isMcp

@@ -38,8 +38,5 @@ export interface EnvConfig {
 
   // Legacy support
   AGENT_DID?: string;
-  VITE_AGENT_ID?: string;
   VITE_NVM_ENVIRONMENT?: string;
-  VITE_TRANSPORT?: string;
-  VITE_ENDPOINT?: string;
 }

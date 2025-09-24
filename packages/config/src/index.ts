@@ -13,7 +13,6 @@ export function loadRuntimeConfig(req?: any): RuntimeConfig {
   // Determine transport from various sources
   const transport = (fromWindow.transport ||
     process.env.TRANSPORT ||
-    process.env.VITE_TRANSPORT ||
     "http") as "http" | "mcp";
 
   // Load agent configuration based on transport
@@ -22,7 +21,7 @@ export function loadRuntimeConfig(req?: any): RuntimeConfig {
   // Override with window globals if available
   const finalAgent: AgentConfig = {
     ...agent,
-    id: fromWindow.agentId || fromWindow.VITE_AGENT_ID || agent.id,
+    id: fromWindow.agentId || agent.id,
     name: fromWindow.agentName || agent.name,
     endpoint: fromWindow.endpoint || agent.endpoint,
     environment:

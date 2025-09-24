@@ -8,6 +8,7 @@
  * @returns Promise resolving to the current block number.
  */
 import { getStoredPlanId } from "./utils";
+import { getTransport } from "./config";
 
 /**
  * Builds the Plan ID header map using the namespaced storage key.
@@ -25,7 +26,7 @@ function getPlanIdHeader(): Record<string, string> {
 }
 
 export async function getCurrentBlockNumber(): Promise<number> {
-  const transport = (import.meta as any).env?.VITE_TRANSPORT || "http";
+  const transport = getTransport();
   const response = await fetch("/api/latest-block", {
     method: "GET",
     headers: {
@@ -50,7 +51,7 @@ export async function sendMessageToAgent(content: string): Promise<{
 }> {
   const apiKey = localStorage.getItem("nvmApiKey");
   const planId = getStoredPlanId() || "";
-  const transport = (import.meta as any).env?.VITE_TRANSPORT || "http";
+  const transport = getTransport();
   const response = await fetch("/api/agent", {
     method: "POST",
     headers: {
@@ -78,7 +79,7 @@ export async function sendMessageToAgent(content: string): Promise<{
 export async function getTask(task_id: string): Promise<any> {
   const apiKey = localStorage.getItem("nvmApiKey");
   const planId = getStoredPlanId() || "";
-  const transport = (import.meta as any).env?.VITE_TRANSPORT || "http";
+  const transport = getTransport();
   const response = await fetch(`/api/task?task_id=${task_id}`, {
     method: "GET",
     headers: {
@@ -104,7 +105,7 @@ export async function getBurnTransaction(
 ): Promise<any | null> {
   const apiKey = localStorage.getItem("nvmApiKey");
   const planId = getStoredPlanId() || "";
-  const transport = (import.meta as any).env?.VITE_TRANSPORT || "http";
+  const transport = getTransport();
   const burnTxResp = await fetch(`/api/find-burn-tx?fromBlock=${blockNumber}`, {
     method: "GET",
     headers: {
@@ -140,7 +141,7 @@ export async function updateCreditsAndGetBurnTx(
 export async function listMcpToolsClient(): Promise<any> {
   const apiKey = localStorage.getItem("nvmApiKey");
   const planId = getStoredPlanId() || "";
-  const transport = (import.meta as any).env?.VITE_TRANSPORT || "http";
+  const transport = getTransport();
   const resp = await fetch("/api/mcp/tools", {
     method: "GET",
     headers: {
@@ -166,7 +167,7 @@ export async function callMcpToolClient(
 ): Promise<{ response: string; content?: any }> {
   const apiKey = localStorage.getItem("nvmApiKey");
   const planId = getStoredPlanId() || "";
-  const transport = (import.meta as any).env?.VITE_TRANSPORT || "http";
+  const transport = getTransport();
   const resp = await fetch("/api/mcp/tool", {
     method: "POST",
     headers: {

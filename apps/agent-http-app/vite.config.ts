@@ -6,19 +6,6 @@ import path from "path";
 export default defineConfig({
   plugins: [react()],
   base: "/simple-agent/",
-  define: {
-    // Define environment variables for HTTP agent
-    "import.meta.env.VITE_TRANSPORT": '"http"',
-    "import.meta.env.VITE_HTTP_AGENT_ID": JSON.stringify(
-      process.env.HTTP_AGENT_ID || ""
-    ),
-    "import.meta.env.VITE_HTTP_AGENT_ENDPOINT": JSON.stringify(
-      process.env.HTTP_AGENT_ENDPOINT || ""
-    ),
-    "import.meta.env.VITE_NVM_ENVIRONMENT": JSON.stringify(
-      process.env.NVM_ENVIRONMENT || ""
-    ),
-  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "../../packages/ui-core/src"),

@@ -22,12 +22,6 @@
     
     # Build-time variables for the client (Vite picks them up)
     # Common variables
-    ARG VITE_NVM_ENVIRONMENT="staging_sandbox"
-    ENV VITE_NVM_ENVIRONMENT=${VITE_NVM_ENVIRONMENT}
-    
-    ARG VITE_TRANSPORT="http"
-    ENV VITE_TRANSPORT=${VITE_TRANSPORT}
-    
     # HTTP Agent variables
     ARG HTTP_AGENT_ID=""
     ENV HTTP_AGENT_ID=${HTTP_AGENT_ID}

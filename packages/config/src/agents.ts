@@ -32,10 +32,7 @@ export function loadAgentConfig(transport: "http" | "mcp"): AgentConfig {
   }
 
   // Determine which environment variables to use based on transport
-  const agentId =
-    transport === "http"
-      ? env.HTTP_AGENT_ID || env.AGENT_DID || env.VITE_AGENT_ID
-      : env.MCP_AGENT_ID || env.AGENT_DID || env.VITE_AGENT_ID;
+  const agentId = transport === "http" ? env.HTTP_AGENT_ID : env.MCP_AGENT_ID;
 
   const agentName =
     transport === "http" ? env.HTTP_AGENT_NAME : env.MCP_AGENT_NAME;

@@ -5,6 +5,7 @@
  * @returns { [number | null, () => void] } [credits, refreshCredits]
  */
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useAppConfig } from "./config";
 
 export function useUserCredits() {
   const [credits, setCredits] = useState<number | null>(null);
@@ -13,7 +14,7 @@ export function useUserCredits() {
   const fetchCredits = useCallback(async () => {
     try {
       const apiKey = localStorage.getItem("nvmApiKey");
-      const transport = (import.meta as any).env?.VITE_TRANSPORT || "http";
+      const { transport } = useAppConfig();
       const resp = await fetch("/api/credit", {
         headers: {
           ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),

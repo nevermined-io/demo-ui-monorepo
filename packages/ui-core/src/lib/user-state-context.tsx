@@ -5,6 +5,7 @@ import {
   getStoredPlanId,
   setStoredPlanId,
 } from "./utils";
+import { useAppConfig } from "./config";
 
 /**
  * Context for the global user state (API Key and credits)
@@ -50,7 +51,7 @@ export function UserStateProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       const planIdHeader = getStoredPlanId();
-      const transport = (import.meta as any).env?.VITE_TRANSPORT || "http";
+      const { transport } = useAppConfig();
       const resp = await fetch("/api/credit", {
         headers: {
           Authorization: `Bearer ${apiKey}`,

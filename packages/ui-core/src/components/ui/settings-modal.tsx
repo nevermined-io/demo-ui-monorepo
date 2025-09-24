@@ -12,6 +12,7 @@ import { Slider } from "./slider";
 import { useUserState } from "@/lib/user-state-context";
 import { getStoredPlanId, setStoredPlanId } from "@/lib/utils";
 import { useChat } from "@/lib/chat-context";
+import { useAppConfig } from "@/lib/config";
 
 /**
  * Modal for configuring the Nevermined API Key and Plan ID.
@@ -92,7 +93,7 @@ function SettingsModalContent({
     setLoading(true);
     setError("");
     try {
-      const transport = (import.meta as any).env?.VITE_TRANSPORT || "http";
+      const { transport } = useAppConfig();
       const resp = await fetch("/api/credit", {
         headers: {
           Authorization: `Bearer ${apiKey.trim()}`,
@@ -125,7 +126,7 @@ function SettingsModalContent({
     setBurnError("");
     setBurnSuccess("");
     try {
-      const transport = (import.meta as any).env?.VITE_TRANSPORT || "http";
+      const { transport } = useAppConfig();
       const resp = await fetch("/api/burn-credits", {
         method: "POST",
         headers: {
