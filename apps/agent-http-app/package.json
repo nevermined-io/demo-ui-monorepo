@@ -16,13 +16,13 @@
     "@app/prompts": "*",
     "@app/transport-http": "*",
     "@app/ui-core": "*",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.33.0",
-    "@types/react": "^18.3.11",
-    "@types/react-dom": "^18.3.1",
+    "@types/react": "^19.1.12",
+    "@types/react-dom": "^19.1.9",
     "@vitejs/plugin-react": "^5.0.0",
     "autoprefixer": "^10.4.20",
     "eslint": "^9.33.0",

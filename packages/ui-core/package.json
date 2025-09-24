@@ -52,9 +52,7 @@
     "framer-motion": "^12.23.12",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.543.0",
-    "react": "^18.3.1",
     "react-day-picker": "^9.9.0",
-    "react-dom": "^18.3.1",
     "react-hook-form": "^7.62.0",
     "react-markdown": "^10.1.0",
     "react-resizable-panels": "^3.0.5",
@@ -65,15 +63,21 @@
     "wouter": "^3.7.1",
     "zod": "^3.23.8"
   },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.14",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
+  },
   "exports": {
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     }
-  },
-  "devDependencies": {
-    "autoprefixer": "^10.4.20",
-    "postcss": "^8.4.47",
-    "tailwindcss": "^3.4.14"
   }
 }

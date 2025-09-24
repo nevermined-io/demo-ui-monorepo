@@ -19,13 +19,13 @@
   resolved "https://registry.npmjs.org/@alloc/quick-lru/-/quick-lru-5.2.0.tgz"
   integrity sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw==
 
-"@app/agent-client@*", "@app/agent-client@file:/Users/cansoylu/Desktop/demo-ui-monorepo/packages/agent-client":
+"@app/agent-client@*", "@app/agent-client@file:/Users/charly/Sites/nevermined/demo-uis/demo-ui-monorepo/packages/agent-client":
   version "0.1.0"
   resolved "file:packages/agent-client"
   dependencies:
     "@app/domain" "*"
 
-"@app/agent-http-app@file:/Users/cansoylu/Desktop/demo-ui-monorepo/apps/agent-http-app":
+"@app/agent-http-app@file:/Users/charly/Sites/nevermined/demo-uis/demo-ui-monorepo/apps/agent-http-app":
   version "0.0.0"
   resolved "file:apps/agent-http-app"
   dependencies:
@@ -35,10 +35,10 @@
     "@app/prompts" "*"
     "@app/transport-http" "*"
     "@app/ui-core" "*"
-    react "^18.3.1"
-    react-dom "^18.3.1"
+    react "^19.1.1"
+    react-dom "^19.1.1"
 
-"@app/agent-mcp-app@file:/Users/cansoylu/Desktop/demo-ui-monorepo/apps/agent-mcp-app":
+"@app/agent-mcp-app@file:/Users/charly/Sites/nevermined/demo-uis/demo-ui-monorepo/apps/agent-mcp-app":
   version "0.0.0"
   resolved "file:apps/agent-mcp-app"
   dependencies:
@@ -48,26 +48,26 @@
     "@app/prompts" "*"
     "@app/transport-mcp" "*"
     "@app/ui-core" "*"
-    react "^18.3.1"
-    react-dom "^18.3.1"
+    react "^19.1.1"
+    react-dom "^19.1.1"
 
-"@app/config@*", "@app/config@file:/Users/cansoylu/Desktop/demo-ui-monorepo/packages/config":
+"@app/config@*", "@app/config@file:/Users/charly/Sites/nevermined/demo-uis/demo-ui-monorepo/packages/config":
   version "0.1.0"
   resolved "file:packages/config"
 
-"@app/domain@*", "@app/domain@file:/Users/cansoylu/Desktop/demo-ui-monorepo/packages/domain":
+"@app/domain@*", "@app/domain@file:/Users/charly/Sites/nevermined/demo-uis/demo-ui-monorepo/packages/domain":
   version "0.1.0"
   resolved "file:packages/domain"
 
-"@app/payments-client@file:/Users/cansoylu/Desktop/demo-ui-monorepo/packages/payments-client":
+"@app/payments-client@file:/Users/charly/Sites/nevermined/demo-uis/demo-ui-monorepo/packages/payments-client":
   version "0.1.0"
   resolved "file:packages/payments-client"
 
-"@app/prompts@*", "@app/prompts@file:/Users/cansoylu/Desktop/demo-ui-monorepo/packages/prompts":
+"@app/prompts@*", "@app/prompts@file:/Users/charly/Sites/nevermined/demo-uis/demo-ui-monorepo/packages/prompts":
   version "0.1.0"
   resolved "file:packages/prompts"
 
-"@app/server-api@*", "@app/server-api@file:/Users/cansoylu/Desktop/demo-ui-monorepo/packages/server-api":
+"@app/server-api@*", "@app/server-api@file:/Users/charly/Sites/nevermined/demo-uis/demo-ui-monorepo/packages/server-api":
   version "0.1.0"
   resolved "file:packages/server-api"
   dependencies:
@@ -77,7 +77,7 @@
     express "^4.21.2"
     openai "^4.103.0"
 
-"@app/server-core@file:/Users/cansoylu/Desktop/demo-ui-monorepo/packages/server-core":
+"@app/server-core@file:/Users/charly/Sites/nevermined/demo-uis/demo-ui-monorepo/packages/server-core":
   version "0.1.0"
   resolved "file:packages/server-core"
   dependencies:
@@ -86,19 +86,19 @@
     dotenv "^16.5.0"
     express "^4.21.2"
 
-"@app/transport-http@*", "@app/transport-http@file:/Users/cansoylu/Desktop/demo-ui-monorepo/packages/transport-http":
+"@app/transport-http@*", "@app/transport-http@file:/Users/charly/Sites/nevermined/demo-uis/demo-ui-monorepo/packages/transport-http":
   version "0.1.0"
   resolved "file:packages/transport-http"
   dependencies:
     "@app/domain" "*"
 
-"@app/transport-mcp@*", "@app/transport-mcp@file:/Users/cansoylu/Desktop/demo-ui-monorepo/packages/transport-mcp":
+"@app/transport-mcp@*", "@app/transport-mcp@file:/Users/charly/Sites/nevermined/demo-uis/demo-ui-monorepo/packages/transport-mcp":
   version "0.1.0"
   resolved "file:packages/transport-mcp"
   dependencies:
     "@app/domain" "*"
 
-"@app/ui-core@*", "@app/ui-core@file:/Users/cansoylu/Desktop/demo-ui-monorepo/packages/ui-core":
+"@app/ui-core@*", "@app/ui-core@file:/Users/charly/Sites/nevermined/demo-uis/demo-ui-monorepo/packages/ui-core":
   version "0.1.0"
   resolved "file:packages/ui-core"
   dependencies:
@@ -140,9 +140,7 @@
     framer-motion "^12.23.12"
     input-otp "^1.4.2"
     lucide-react "^0.543.0"
-    react "^18.3.1"
     react-day-picker "^9.9.0"
-    react-dom "^18.3.1"
     react-hook-form "^7.62.0"
     react-markdown "^10.1.0"
     react-resizable-panels "^3.0.5"
@@ -841,15 +839,7 @@
   resolved "https://registry.npmjs.org/@jridgewell/sourcemap-codec/-/sourcemap-codec-1.5.5.tgz"
   integrity sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og==
 
-"@jridgewell/trace-mapping@^0.3.24":
-  version "0.3.30"
-  resolved "https://registry.npmjs.org/@jridgewell/trace-mapping/-/trace-mapping-0.3.30.tgz"
-  integrity sha512-GQ7Nw5G2lTu/BtHTKfXhKHok2WGetd4XYcVKGx00SjAk8GMwgJM3zr6zORiPGuOE+/vkc90KtTosSSvaCjKb2Q==
-  dependencies:
-    "@jridgewell/resolve-uri" "^3.1.0"
-    "@jridgewell/sourcemap-codec" "^1.4.14"
-
-"@jridgewell/trace-mapping@^0.3.28":
+"@jridgewell/trace-mapping@^0.3.24", "@jridgewell/trace-mapping@^0.3.28":
   version "0.3.30"
   resolved "https://registry.npmjs.org/@jridgewell/trace-mapping/-/trace-mapping-0.3.30.tgz"
   integrity sha512-GQ7Nw5G2lTu/BtHTKfXhKHok2WGetd4XYcVKGx00SjAk8GMwgJM3zr6zORiPGuOE+/vkc90KtTosSSvaCjKb2Q==
@@ -1818,11 +1808,6 @@
   dependencies:
     undici-types "~5.26.4"
 
-"@types/prop-types@*":
-  version "15.7.15"
-  resolved "https://registry.npmjs.org/@types/prop-types/-/prop-types-15.7.15.tgz"
-  integrity sha512-F6bEyamV9jKGAFBEmlQnesRPGOQqS2+Uwi0Em15xenOxHaf2hv6L8YCVn3rPdPJOiJfPiCnLIRyvwVaqMY3MIw==
-
 "@types/qs@*":
   version "6.14.0"
   resolved "https://registry.npmjs.org/@types/qs/-/qs-6.14.0.tgz"
@@ -1838,24 +1823,11 @@
   resolved "https://registry.npmjs.org/@types/react-dom/-/react-dom-19.1.9.tgz"
   integrity sha512-qXRuZaOsAdXKFyOhRBg6Lqqc0yay13vN7KrIg4L7N4aaHN68ma9OK3NE1BoDFgFOTfM7zg+3/8+2n8rLUH3OKQ==
 
-"@types/react-dom@^18.3.1":
-  version "18.3.7"
-  resolved "https://registry.npmjs.org/@types/react-dom/-/react-dom-18.3.7.tgz"
-  integrity sha512-MEe3UeoENYVFXzoXEWsvcpg6ZvlrFNlOQ7EOsvhI3CfAXwzPfO8Qwuxd40nepsYKqyyVQnTdEfv68q91yLcKrQ==
-
 "@types/react@*", "@types/react@^18.2.25 || ^19", "@types/react@^19.0.0", "@types/react@^19.1.10", "@types/react@^19.1.12", "@types/react@>=18":
   version "19.1.12"
   resolved "https://registry.npmjs.org/@types/react/-/react-19.1.12.tgz"
   integrity sha512-cMoR+FoAf/Jyq6+Df2/Z41jISvGZZ2eTlnsaJRptmZ76Caldwy1odD4xTr/gNV9VLj0AWgg/nmkevIyUfIIq5w==
   dependencies:
-    csstype "^3.0.2"
-
-"@types/react@^18.0.0", "@types/react@^18.3.11":
-  version "18.3.24"
-  resolved "https://registry.npmjs.org/@types/react/-/react-18.3.24.tgz"
-  integrity sha512-0dLEBsA1kI3OezMBF8nSsb7Nk19ZnsyE1LLhB8r27KbgU5H4pvuqZLdtE+aUkJVoXgTVuA+iLIwmZ0TuK4tx6A==
-  dependencies:
-    "@types/prop-types" "*"
     csstype "^3.0.2"
 
 "@types/send@*":
@@ -2725,10 +2697,11 @@ delayed-stream@~1.0.0:
   resolved "https://registry.npmjs.org/delayed-stream/-/delayed-stream-1.0.0.tgz"
   integrity sha512-ZySD7Nf91aLB0RxL4KGrKHBXl7Eds1DAmEdcoVawXnLD7SDhpNgtuII2aAkg7a7QS41jxPSZ17p4VdGnMHk3MQ==
 
-"demo-app@file:/Users/cansoylu/Desktop/demo-ui-monorepo/apps/demo-app":
+"demo-app@file:/Users/charly/Sites/nevermined/demo-uis/demo-ui-monorepo/apps/demo-app":
   version "0.0.0"
   resolved "file:apps/demo-app"
   dependencies:
+    "@radix-ui/react-dialog" "^1.1.15"
     "@radix-ui/react-slot" "^1.2.3"
     "@radix-ui/react-tooltip" "^1.2.8"
     class-variance-authority "^0.7.1"
@@ -2752,11 +2725,6 @@ destroy@1.2.0:
   version "1.2.0"
   resolved "https://registry.npmjs.org/destroy/-/destroy-1.2.0.tgz"
   integrity sha512-2sJGJTaXIIaR1w4iJSNoN0hnMY7Gpc/n8D4qSCJw8QqFWXf7cuAgnEHxBpweaVcPevC2l3KpjYCx3NypQQgaJg==
-
-detect-libc@^2.0.3:
-  version "2.1.0"
-  resolved "https://registry.npmjs.org/detect-libc/-/detect-libc-2.1.0.tgz"
-  integrity sha512-vEtk+OcP7VBRtQZ1EJ3bdgzSfBjgnEalLTp5zjJrS+2Z1w2KZly4SBdac/WDU3hhsNAZ9E8SC96ME4Ey8MZ7cg==
 
 detect-node-es@^1.1.0:
   version "1.1.0"
@@ -3509,11 +3477,6 @@ fresh@0.5.2:
   resolved "https://registry.npmjs.org/fresh/-/fresh-0.5.2.tgz"
   integrity sha512-zJ2mQYM18rEFOudeV4GShTGIQ7RbzA7ozbU9I/XBpm7kqgMywgmylMwXHxZJmkVoYkna9d2pVXVXPdYTP9ej8Q==
 
-fsevents@~2.3.2, fsevents@~2.3.3:
-  version "2.3.3"
-  resolved "https://registry.npmjs.org/fsevents/-/fsevents-2.3.3.tgz"
-  integrity sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==
-
 function-bind@^1.1.2:
   version "1.1.2"
   resolved "https://registry.npmjs.org/function-bind/-/function-bind-1.1.2.tgz"
@@ -4126,7 +4089,7 @@ js-sha3@0.8.0:
   resolved "https://registry.npmjs.org/js-sha3/-/js-sha3-0.8.0.tgz"
   integrity sha512-gF1cRrHhIzNfToc802P800N8PpXS+evLLXfsVpowqmAFR9uwbi89WvXg2QspOmXL8QL86J4T1EpFu+yUkwJY3Q==
 
-"js-tokens@^3.0.0 || ^4.0.0", js-tokens@^4.0.0:
+js-tokens@^4.0.0:
   version "4.0.0"
   resolved "https://registry.npmjs.org/js-tokens/-/js-tokens-4.0.0.tgz"
   integrity sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==
@@ -4185,29 +4148,6 @@ levn@^0.4.1:
     prelude-ls "^1.2.1"
     type-check "~0.4.0"
 
-lightningcss-darwin-arm64@1.30.1:
-  version "1.30.1"
-  resolved "https://registry.npmjs.org/lightningcss-darwin-arm64/-/lightningcss-darwin-arm64-1.30.1.tgz"
-  integrity sha512-c8JK7hyE65X1MHMN+Viq9n11RRC7hgin3HhYKhrMyaXflk5GVplZ60IxyoVtzILeKr+xAJwg6zK6sjTBJ0FKYQ==
-
-lightningcss@^1.21.0:
-  version "1.30.1"
-  resolved "https://registry.npmjs.org/lightningcss/-/lightningcss-1.30.1.tgz"
-  integrity sha512-xi6IyHML+c9+Q3W0S4fCQJOym42pyurFiJUHEcEyHS0CeKzia4yZDEsLlqOFykxOdHpNy0NmvVO31vcSqAxJCg==
-  dependencies:
-    detect-libc "^2.0.3"
-  optionalDependencies:
-    lightningcss-darwin-arm64 "1.30.1"
-    lightningcss-darwin-x64 "1.30.1"
-    lightningcss-freebsd-x64 "1.30.1"
-    lightningcss-linux-arm-gnueabihf "1.30.1"
-    lightningcss-linux-arm64-gnu "1.30.1"
-    lightningcss-linux-arm64-musl "1.30.1"
-    lightningcss-linux-x64-gnu "1.30.1"
-    lightningcss-linux-x64-musl "1.30.1"
-    lightningcss-win32-arm64-msvc "1.30.1"
-    lightningcss-win32-x64-msvc "1.30.1"
-
 lilconfig@^3.0.0, lilconfig@^3.1.3:
   version "3.1.3"
   resolved "https://registry.npmjs.org/lilconfig/-/lilconfig-3.1.3.tgz"
@@ -4234,13 +4174,6 @@ longest-streak@^3.0.0:
   version "3.1.0"
   resolved "https://registry.npmjs.org/longest-streak/-/longest-streak-3.1.0.tgz"
   integrity sha512-9Ri+o0JYgehTaVBBDoMqIl8GXtbWg711O3srftcHhZ0dqnETqLaoIK0x17fUw9rFSlK/0NlsKe0Ahhyl5pXE2g==
-
-loose-envify@^1.1.0:
-  version "1.4.0"
-  resolved "https://registry.npmjs.org/loose-envify/-/loose-envify-1.4.0.tgz"
-  integrity sha512-lyuxPGr/Wfhrlem2CL/UcnUc1zcqKAImBDzukY7Y5F/yQiNdko6+fRLevlw1HgMySw7f611UIY408EtxRSoK3Q==
-  dependencies:
-    js-tokens "^3.0.0 || ^4.0.0"
 
 lru-cache@^10.2.0:
   version "10.4.3"
@@ -5017,9 +4950,9 @@ openai@^4.103.0:
     node-fetch "^2.6.7"
 
 openai@^5.10.2:
-  version "5.20.2"
-  resolved "https://registry.npmjs.org/openai/-/openai-5.20.2.tgz"
-  integrity sha512-ZeBIEazj6W/XOulMw92L8iU5FblQeM5IxjPRCZNVArNXsoF+bLPnS7B2X4O0JSmpCM+F5Gdajr6bn4nAUj4LFQ==
+  version "5.23.0"
+  resolved "https://registry.npmjs.org/openai/-/openai-5.23.0.tgz"
+  integrity sha512-Cfq155NHzI7VWR67LUNJMIgPZy2oSh7Fld/OKhxq648BiUjELAvcge7g30xJ6vAfwwXf6TVK0KKuN+3nmIJG/A==
 
 optionator@^0.9.3:
   version "0.9.4"
@@ -5301,20 +5234,12 @@ react-day-picker@^9.9.0:
     date-fns "^4.1.0"
     date-fns-jalali "^4.1.0-0"
 
-"react-dom@^16.0.0 || ^17.0.0 || ^18.0.0 || ^19.0.0", "react-dom@^16.14.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc", "react-dom@^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc", "react-dom@^16.8 || ^17.0 || ^18.0 || ^19.0.0 || ^19.0.0-rc", "react-dom@^18 || ^19 || ^19.0.0-rc", "react-dom@^18.0.0 || ^19.0.0", react-dom@^19.1.1, react-dom@>=16.8.0:
+"react-dom@^16.0.0 || ^17.0.0 || ^18.0.0 || ^19.0.0", "react-dom@^16.14.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc", "react-dom@^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc", "react-dom@^16.8 || ^17.0 || ^18.0 || ^19.0.0 || ^19.0.0-rc", "react-dom@^18 || ^19 || ^19.0.0-rc", "react-dom@^18.0.0 || ^19.0.0", react-dom@^19.0.0, react-dom@^19.1.1, react-dom@>=16.8.0:
   version "19.1.1"
   resolved "https://registry.npmjs.org/react-dom/-/react-dom-19.1.1.tgz"
   integrity sha512-Dlq/5LAZgF0Gaz6yiqZCf6VCcZs1ghAJyrsu84Q/GT0gV+mCxbfmKNoGRKBYMJ8IEdGPqu49YWXD02GCknEDkw==
   dependencies:
     scheduler "^0.26.0"
-
-react-dom@^18.3.1:
-  version "18.3.1"
-  resolved "https://registry.npmjs.org/react-dom/-/react-dom-18.3.1.tgz"
-  integrity sha512-5m4nQKp+rZRb09LNH59GM4BxTh9251/ylbKIbpe7TpGxfJ+9kv6BLkLBXIjjspbgbnIBNqlI23tRnTWT0snUIw==
-  dependencies:
-    loose-envify "^1.1.0"
-    scheduler "^0.23.2"
 
 react-hook-form@^7.62.0:
   version "7.62.0"
@@ -5388,17 +5313,10 @@ react-style-singleton@^2.2.2, react-style-singleton@^2.2.3:
     get-nonce "^1.0.0"
     tslib "^2.0.0"
 
-"react@^16.14.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc", "react@^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0", "react@^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc", "react@^16.8 || ^17.0 || ^18.0 || ^19.0.0 || ^19.0.0-rc", "react@^16.8.0 || ^17 || ^18 || ^19", "react@^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0", "react@^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc", "react@^16.8.0 || ^17.0.1 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc", "react@^16.9.0 || ^17.0.0 || ^18 || ^19", "react@^18 || ^19", "react@^18 || ^19 || ^19.0.0-rc", "react@^18.0 || ^19", "react@^18.0.0 || ^19.0.0", react@^19.1.1, react@>=16.8.0, react@>=18:
+"react@^16.14.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc", "react@^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0", "react@^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc", "react@^16.8 || ^17.0 || ^18.0 || ^19.0.0 || ^19.0.0-rc", "react@^16.8.0 || ^17 || ^18 || ^19", "react@^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0", "react@^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc", "react@^16.8.0 || ^17.0.1 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc", "react@^16.9.0 || ^17.0.0 || ^18 || ^19", "react@^18 || ^19", "react@^18 || ^19 || ^19.0.0-rc", "react@^18.0 || ^19", "react@^18.0.0 || ^19.0.0", react@^19.0.0, react@^19.1.1, react@>=16.8.0, react@>=18:
   version "19.1.1"
   resolved "https://registry.npmjs.org/react/-/react-19.1.1.tgz"
   integrity sha512-w8nqGImo45dmMIfljjMwOGtbmC/mk4CMYhWIicdSflH91J9TyCyczcPFXJzrZ/ZXcgGRFeP6BU0BEJTw6tZdfQ==
-
-react@^18.3.1:
-  version "18.3.1"
-  resolved "https://registry.npmjs.org/react/-/react-18.3.1.tgz"
-  integrity sha512-wS+hAgJShR0KhEvPJArfuPVN1+Hz1t0Y6n5jLrGQbkb4urgPE/0Rve+1kMB1v/oWgHgm4WIcV+i7F2pTVj+2iQ==
-  dependencies:
-    loose-envify "^1.1.0"
 
 read-cache@^1.0.0:
   version "1.0.0"
@@ -5636,13 +5554,6 @@ safe-regex-test@^1.1.0:
   version "2.1.2"
   resolved "https://registry.npmjs.org/safer-buffer/-/safer-buffer-2.1.2.tgz"
   integrity sha512-YZo3K82SD7Riyi0E1EQPojLz7kpepnSQI9IyPbHHg1XXXevb5dJI7tpyN2ADxGcQbHG7vcyRHk0cbwqcQriUtg==
-
-scheduler@^0.23.2:
-  version "0.23.2"
-  resolved "https://registry.npmjs.org/scheduler/-/scheduler-0.23.2.tgz"
-  integrity sha512-UOShsPwz7NrMUqhR6t0hWjFduvOzbtv7toDH1/hIrfRNIDBnnBWd0CwJTGvTpngVlmwGCdP9/Zl/tVrDqcuYzQ==
-  dependencies:
-    loose-envify "^1.1.0"
 
 scheduler@^0.26.0:
   version "0.26.0"
@@ -6393,9 +6304,9 @@ victory-vendor@^37.0.2:
     d3-timer "^3.0.1"
 
 "vite@^4.2.0 || ^5.0.0 || ^6.0.0 || ^7.0.0", vite@^7.1.2:
-  version "7.1.5"
-  resolved "https://registry.npmjs.org/vite/-/vite-7.1.5.tgz"
-  integrity sha512-4cKBO9wR75r0BeIWWWId9XK9Lj6La5X846Zw9dFfzMRw38IlTk2iCcUt6hsyiDRcPidc55ZParFYDXi0nXOeLQ==
+  version "7.1.7"
+  resolved "https://registry.npmjs.org/vite/-/vite-7.1.7.tgz"
+  integrity sha512-VbA8ScMvAISJNJVbRDTJdCwqQoAareR/wutevKanhR2/1EkoXVZVkkORaYm/tNVCjP/UDTKtcw3bAkwOUdedmA==
   dependencies:
     esbuild "^0.25.0"
     fdir "^6.5.0"

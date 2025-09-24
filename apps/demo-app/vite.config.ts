@@ -10,6 +10,7 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
       "@app/ui-core": path.resolve(__dirname, "../../packages/ui-core/src"),
     },
+    dedupe: ["react", "react-dom"],
   },
   css: {
     postcss: path.resolve(__dirname, "./postcss.config.cjs"),
