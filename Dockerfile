@@ -54,7 +54,8 @@
     ENV RPC_URL=${RPC_URL}
     
     # Build: Vite creates dist/public and esbuild bundles server to dist/index.js
-    RUN yarn build
+    # Build packages first, then apps to ensure proper dependency order
+    RUN yarn build:packages && yarn build:apps
     
     # --- Runtime stage: run the production server ---
     FROM --platform=linux/amd64 node:20-alpine AS runner
