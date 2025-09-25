@@ -8,9 +8,9 @@ import {
 } from "./dialog";
 import { Input } from "./input";
 import { Button } from "./button";
-import { Slider } from "./slider";
 import { useUserState } from "@/lib/user-state-context";
 import { getStoredPlanId, setStoredPlanId } from "@/lib/utils";
+import { getWithTTL, setWithTTL } from "@/lib/storage-utils";
 import { useChat } from "@/lib/chat-context";
 import { useAppConfig } from "@/lib/config";
 
@@ -61,7 +61,7 @@ function SettingsModalContent({
 
   useEffect(() => {
     if (open) {
-      const stored = localStorage.getItem("nvmApiKey") || "";
+      const stored = getWithTTL("nvmApiKey") || "";
       setApiKey(stored);
       const storedPlan = getStoredPlanId() || "";
       setLocalPlanId(storedPlan);
@@ -101,7 +101,7 @@ function SettingsModalContent({
         },
       });
       if (!resp.ok) throw new Error("Invalid API Key");
-      localStorage.setItem("nvmApiKey", apiKey.trim());
+      setWithTTL("nvmApiKey", apiKey.trim());
       if (localPlanId.trim()) {
         setStoredPlanId(localPlanId.trim());
         setPlanId(localPlanId.trim());

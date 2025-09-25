@@ -4,6 +4,7 @@
  * @module chat-requests
  */
 import { getStoredPlanId } from "./utils";
+import { getWithTTL } from "./storage-utils";
 
 /**
  * Calls the LLM router endpoint to determine the next action.
@@ -19,7 +20,7 @@ export async function llmRouterRequest(
   message?: string;
   reason?: string;
 }> {
-  const apiKey = localStorage.getItem("nvmApiKey");
+  const apiKey = getWithTTL("nvmApiKey");
   const resp = await fetch("/api/llm-router", {
     method: "POST",
     headers: {
@@ -41,7 +42,7 @@ export async function llmRouterRequest(
  * @returns {Promise<any>} The response data.
  */
 export async function orderPlanRequest(): Promise<any> {
-  const apiKey = localStorage.getItem("nvmApiKey");
+  const apiKey = getWithTTL("nvmApiKey");
   const resp = await fetch("/api/order-plan", {
     method: "POST",
     headers: {
@@ -102,7 +103,7 @@ export async function getPlanCostRequest(): Promise<{
   planPrice: string;
   planCredits: number;
 }> {
-  const apiKey = localStorage.getItem("nvmApiKey");
+  const apiKey = getWithTTL("nvmApiKey");
   const resp = await fetch(`/api/plan/cost`, {
     headers: {
       ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),

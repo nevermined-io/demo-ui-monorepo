@@ -10,8 +10,7 @@ function getStoredPlanId(): string {
     const transport = "http"; // HTTP transport is hardcoded for this package
     const scopedKey = `nvmPlanId_${transport}`;
     const scopedValue = localStorage.getItem(scopedKey);
-    const legacyValue = localStorage.getItem("nvmPlanId");
-    return scopedValue || legacyValue || "";
+    return scopedValue || "";
   } catch (error) {
     console.warn("[transport-http] getStoredPlanId error:", error);
     return "";
@@ -32,7 +31,6 @@ export class HttpAgentClient implements AgentClient {
   private commonHeaders(): HeadersInit {
     const apiKey = localStorage.getItem("nvmApiKey") || "";
     const transport = "http"; // HTTP transport is hardcoded for this package
-    const scopedKey = `nvmPlanId_${transport}`;
     const planId = getStoredPlanId();
     const endpoint = (globalThis as any)?.__RUNTIME_CONFIG__?.endpoint || "";
     return {

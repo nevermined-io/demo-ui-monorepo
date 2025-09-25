@@ -5,6 +5,7 @@
  * @returns { [number | null, () => void] } [credits, refreshCredits]
  */
 import { useState, useEffect, useRef, useCallback } from "react";
+import { getWithTTL } from "./storage-utils";
 import { useAppConfig } from "./config";
 
 export function useUserCredits() {
@@ -13,7 +14,7 @@ export function useUserCredits() {
 
   const fetchCredits = useCallback(async () => {
     try {
-      const apiKey = localStorage.getItem("nvmApiKey");
+      const apiKey = getWithTTL("nvmApiKey");
       const { transport } = useAppConfig();
       const resp = await fetch("/api/credit", {
         headers: {
