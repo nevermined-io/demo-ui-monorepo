@@ -84,7 +84,7 @@ if (needsApiKey || insufficientCredits) {
 `,
   },
   {
-    text: "User pays by card and receives credits",
+    text: "The user pays by card and receives credits. Use the test card `4242 4242 4242 4242` with any future date and CVC.",
     image: "/s3.png",
     desc: "Integration is performed via Stripe.",
   },
