@@ -1,6 +1,6 @@
-import { CircleHelp } from "lucide-react";
-import { Badge } from "./ui/badge";
-import { Button } from "./ui/button";
+import { CircleHelp } from "lucide-react"
+import { Badge } from "./ui/badge"
+import { Button } from "./ui/button"
 import {
   Sheet,
   SheetContent,
@@ -8,14 +8,14 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from "./ui/sheet";
+} from "./ui/sheet"
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "./ui/tooltip";
-import { CodeBlock } from "./code-block";
+} from "./ui/tooltip"
+import { CodeBlock } from "./code-block"
 
 const badges = [
   {
@@ -52,7 +52,7 @@ const badges = [
     tooltip:
       "the AI Agent tracks all the internal requests sent to the LLMs used for further analysis",
   },
-];
+]
 
 const steps = [
   {
@@ -90,7 +90,7 @@ if (needsApiKey || insufficientCredits) {
 `,
   },
   {
-    text: "User pays by card and receives credits",
+    text: "The user pays by card and receives credits. Use the test card `4242 4242 4242 4242` with any future date and CVC.",
     image: "/s3.png",
     desc: "Integration is performed via Stripe.",
   },
@@ -136,7 +136,7 @@ if (needsApiKey || insufficientCredits) {
     image: "/mcp67.png",
     desc: "Once the response is delivered to the user the task can be marked as complete. ",
   },
-];
+]
 
 const McpAgent = () => {
   return (
@@ -217,7 +217,7 @@ const McpAgent = () => {
         </ol>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default McpAgent;
+export default McpAgent
