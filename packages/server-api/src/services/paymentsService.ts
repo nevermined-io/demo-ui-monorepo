@@ -128,7 +128,10 @@ export async function createTaskMcp(
     if (metadata && typeof metadata === "object") {
       return { output: outputText, redemptionResult: metadata };
     }
-    return { output: outputText, redemptionResult: undefined };
+    return { output: outputText, redemptionResult: {} };
+  } catch (error) {
+    console.error("Error calling MCP tool:", error);
+    throw error;
   } finally {
     try {
       await client.close();

@@ -66,8 +66,8 @@ export async function sendMessageToAgent(content: string): Promise<{
   const data = await response.json();
   return {
     response: data.output,
-    txHash: data.redemptionResult.txHash,
-    credits: data.redemptionResult.creditsRedeemed,
+    txHash: data.redemptionResult?.txHash,
+    credits: data.redemptionResult?.creditsRedeemed,
   };
 }
 
