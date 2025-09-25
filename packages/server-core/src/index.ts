@@ -19,7 +19,7 @@ export function createServer(): express.Express {
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
     const repoRoot = path.resolve(__dirname, "../../..");
-    dotenv.config({ path: path.resolve(repoRoot, ".env") });
+    dotenv.config({ path: path.resolve(repoRoot, ".env"), override: false });
   } catch {}
 
   // Runtime config: exposes window.__RUNTIME_CONFIG__

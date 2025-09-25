@@ -353,7 +353,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       // If router fails (e.g., network), do not force agent usage
       llmAction = "no_action";
       llmReason =
-        "I can chat without using the agent. Ask me anything or try again.";
+        "We're having trouble processing your request. Please try again.";
     }
 
     // Checkout redirects for explicit router outcomes
