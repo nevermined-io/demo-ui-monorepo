@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { cn } from "@/lib/utils";
+import { formatChatText } from "@/lib/text-formatter";
 import { ExternalLink } from "lucide-react";
 import VideoPlayer from "./VideoPlayer";
 import AudioPlayer from "./AudioPlayer";
@@ -42,62 +43,6 @@ export default function MessageGroup({
   messages,
   isFirstGroup,
 }: MessageGroupProps) {
-  // Utility to create clickable links and format card numbers and dates
-  const createClickableLinks = (text: string) => {
-    const urlRegex = /(https?:\/\/[^\s]+)/g;
-    const cardNumberRegex = /`(\d{4}\s\d{4}\s\d{4}\s\d{4})`/g;
-    const dateRegex = /`(\d{2}\/\d{4})`/g;
-
-    // First, handle card numbers and dates in backticks
-    let processedText = text.replace(cardNumberRegex, (match, cardNumber) => {
-      return `<code class="bg-gray-100 text-gray-800 px-1 py-0.5 rounded text-sm font-mono">${cardNumber}</code>`;
-    });
-
-    processedText = processedText.replace(dateRegex, (match, date) => {
-      return `<code class="bg-gray-100 text-gray-800 px-1 py-0.5 rounded text-sm font-mono">${date}</code>`;
-    });
-
-    // Then handle URLs
-    return processedText.split(urlRegex).map((part, index) => {
-      if (part.match(urlRegex)) {
-        const urlObj = new URL(part);
-        let friendlyName = part;
-        const didMatch = part.match(/did:nv:[a-f0-9]+/);
-        if (didMatch) {
-          friendlyName = didMatch[0];
-        } else if (part.match(/\.(jpg|jpeg|png|gif|webp|mp3|mp4)$/i)) {
-          friendlyName = urlObj.pathname.split("/").pop() || part;
-        } else {
-          const domain = urlObj.hostname.replace("www.", "");
-          const firstPath = urlObj.pathname.split("/")[1] || "";
-          friendlyName = `${domain}${firstPath ? `/${firstPath}` : ""}`;
-        }
-        return (
-          <a
-            key={index}
-            href={part}
-            target={
-              urlObj.hostname.endsWith("nevermined.dev") ||
-              urlObj.hostname.endsWith("nevermined.app")
-                ? undefined
-                : "_blank"
-            }
-            rel="noopener noreferrer"
-            className="font-semibold hover:underline"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {friendlyName}
-          </a>
-        );
-      }
-      // Handle HTML content (card numbers)
-      if (part.includes("<code")) {
-        return <span key={index} dangerouslySetInnerHTML={{ __html: part }} />;
-      }
-      return part;
-    });
-  };
-
   return (
     <div
       className={cn(
@@ -212,9 +157,7 @@ export default function MessageGroup({
                   className="flex flex-col gap-2 bg-white/60 text-foreground border border-border rounded-lg p-3 backdrop-blur"
                 >
                   <div className="flex items-center gap-2">
-                    <span className="text-sm">
-                      {createClickableLinks(text)}
-                    </span>
+                    <span className="text-sm">{formatChatText(text)}</span>
                   </div>
                 </div>
               );

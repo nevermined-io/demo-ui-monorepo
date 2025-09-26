@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { formatChatText } from "@/lib/text-formatter";
 import { Message } from "@shared/schema";
 import { useEffect, useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
@@ -13,55 +14,6 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
   const [displayText, setDisplayText] = useState("");
   const [isCollapsed, setIsCollapsed] = useState(false);
   const words = message.content.split(" ");
-
-  // Function to convert URLs in text to clickable links and format card numbers and dates
-  const createClickableLinks = (text: string) => {
-    const urlRegex = /(https?:\/\/[^\s]+)/g;
-    const cardNumberRegex = /`(\d{4}\s\d{4}\s\d{4}\s\d{4})`/g;
-    const dateRegex = /`(\d{2}\/\d{4})`/g;
-
-    // First, handle card numbers and dates in backticks
-    let processedText = text.replace(cardNumberRegex, (match, cardNumber) => {
-      return `<code class="bg-gray-100 text-gray-800 px-1 py-0.5 rounded text-sm font-mono">${cardNumber}</code>`;
-    });
-
-    processedText = processedText.replace(dateRegex, (match, date) => {
-      return `<code class="bg-gray-100 text-gray-800 px-1 py-0.5 rounded text-sm font-mono">${date}</code>`;
-    });
-
-    // Then handle URLs
-    return processedText.split(urlRegex).map((part, index) => {
-      if (part.match(urlRegex)) {
-        let target: undefined | string = "_blank";
-        try {
-          const u = new URL(part);
-          if (
-            u.hostname.endsWith("nevermined.dev") ||
-            u.hostname.endsWith("nevermined.app")
-          ) {
-            target = undefined;
-          }
-        } catch {}
-        return (
-          <a
-            key={index}
-            href={part}
-            target={target}
-            rel="noopener noreferrer"
-            className="text-blue-400 hover:underline"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {part}
-          </a>
-        );
-      }
-      // Handle HTML content (card numbers)
-      if (part.includes("<code")) {
-        return <span key={index} dangerouslySetInnerHTML={{ __html: part }} />;
-      }
-      return part;
-    });
-  };
 
   useEffect(() => {
     if (!message.isUser) {
@@ -122,7 +74,7 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
           <ChevronUp className="w-4 h-4" />
         </Button>
       )}
-      <div>{createClickableLinks(displayText)}</div>
+      <div>{formatChatText(displayText)}</div>
     </motion.div>
   );
 }
