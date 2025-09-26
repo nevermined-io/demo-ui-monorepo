@@ -14,10 +14,23 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const words = message.content.split(" ");
 
-  // Function to convert URLs in text to clickable links
+  // Function to convert URLs in text to clickable links and format card numbers and dates
   const createClickableLinks = (text: string) => {
     const urlRegex = /(https?:\/\/[^\s]+)/g;
-    return text.split(urlRegex).map((part, index) => {
+    const cardNumberRegex = /`(\d{4}\s\d{4}\s\d{4}\s\d{4})`/g;
+    const dateRegex = /`(\d{2}\/\d{4})`/g;
+
+    // First, handle card numbers and dates in backticks
+    let processedText = text.replace(cardNumberRegex, (match, cardNumber) => {
+      return `<code class="bg-gray-100 text-gray-800 px-1 py-0.5 rounded text-sm font-mono">${cardNumber}</code>`;
+    });
+
+    processedText = processedText.replace(dateRegex, (match, date) => {
+      return `<code class="bg-gray-100 text-gray-800 px-1 py-0.5 rounded text-sm font-mono">${date}</code>`;
+    });
+
+    // Then handle URLs
+    return processedText.split(urlRegex).map((part, index) => {
       if (part.match(urlRegex)) {
         let target: undefined | string = "_blank";
         try {
@@ -41,6 +54,10 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
             {part}
           </a>
         );
+      }
+      // Handle HTML content (card numbers)
+      if (part.includes("<code")) {
+        return <span key={index} dangerouslySetInnerHTML={{ __html: part }} />;
       }
       return part;
     });
@@ -89,10 +106,10 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
         !message.isUser && message.type === "reasoning"
           ? "bg-muted text-muted-foreground"
           : !message.isUser && message.type === "answer"
-          ? "bg-card text-card-foreground"
-          : !message.isUser && message.type === "notice"
-          ? "bg-white/60 text-foreground border border-border backdrop-blur"
-          : ""
+            ? "bg-card text-card-foreground"
+            : !message.isUser && message.type === "notice"
+              ? "bg-white/60 text-foreground border border-border backdrop-blur"
+              : ""
       )}
     >
       {!message.isUser && message.type === "reasoning" && (

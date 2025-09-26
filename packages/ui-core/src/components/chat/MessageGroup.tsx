@@ -1,7 +1,6 @@
 // @ts-nocheck
 import { cn } from "@/lib/utils";
-import { ChevronUp, ExternalLink, ChevronDown } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ExternalLink } from "lucide-react";
 import VideoPlayer from "./VideoPlayer";
 import AudioPlayer from "./AudioPlayer";
 import ImageGrid from "./ImageGrid";
@@ -43,12 +42,23 @@ export default function MessageGroup({
   messages,
   isFirstGroup,
 }: MessageGroupProps) {
-  const [isCollapsed, setIsCollapsed] = useState(false);
-
-  // Utility to create clickable links
+  // Utility to create clickable links and format card numbers and dates
   const createClickableLinks = (text: string) => {
     const urlRegex = /(https?:\/\/[^\s]+)/g;
-    return text.split(urlRegex).map((part, index) => {
+    const cardNumberRegex = /`(\d{4}\s\d{4}\s\d{4}\s\d{4})`/g;
+    const dateRegex = /`(\d{2}\/\d{4})`/g;
+
+    // First, handle card numbers and dates in backticks
+    let processedText = text.replace(cardNumberRegex, (match, cardNumber) => {
+      return `<code class="bg-gray-100 text-gray-800 px-1 py-0.5 rounded text-sm font-mono">${cardNumber}</code>`;
+    });
+
+    processedText = processedText.replace(dateRegex, (match, date) => {
+      return `<code class="bg-gray-100 text-gray-800 px-1 py-0.5 rounded text-sm font-mono">${date}</code>`;
+    });
+
+    // Then handle URLs
+    return processedText.split(urlRegex).map((part, index) => {
       if (part.match(urlRegex)) {
         const urlObj = new URL(part);
         let friendlyName = part;
@@ -79,6 +89,10 @@ export default function MessageGroup({
             {friendlyName}
           </a>
         );
+      }
+      // Handle HTML content (card numbers)
+      if (part.includes("<code")) {
+        return <span key={index} dangerouslySetInnerHTML={{ __html: part }} />;
       }
       return part;
     });
@@ -226,7 +240,8 @@ export default function MessageGroup({
                */
               const explorerUrl = `https://base-sepolia.blockscout.com/tx/${message.txHash}`;
               const basePlanUrl =
-                ((globalThis as any)?.__RUNTIME_CONFIG__?.environment || "sandbox") === "sandbox"
+                ((globalThis as any)?.__RUNTIME_CONFIG__?.environment ||
+                  "sandbox") === "sandbox"
                   ? "https://nevermined.app/en/plan/"
                   : "https://nevermined.dev/en/plan/";
               const credits = Number(message.credits);

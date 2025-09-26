@@ -1,5 +1,4 @@
 import OpenAI from "openai";
-import { loadPrompt } from "./promptService.js";
 
 /**
  * Calls the LLM to decide what to do with a user message before sending to the agent.
@@ -8,10 +7,21 @@ export async function llmRouter(
   message: string,
   history: any[],
   credits: number,
-  basePromptOverride?: string
+  basePrompt: string
 ): Promise<{ action: string; message?: string }> {
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  const basePrompt = basePromptOverride || loadPrompt("llm-router.prompt");
+
+  // Inject current date into the prompt
+  const currentDate = new Date();
+  const currentMonth = String(currentDate.getMonth() + 1).padStart(2, "0"); // getMonth() returns 0-11, so add 1 and pad with zero
+  const currentYear = currentDate.getFullYear();
+
+  // Replace placeholder with actual current month and year in code format
+  basePrompt = basePrompt.replace(
+    /{CURRENT_DATE}/g,
+    `\`${currentMonth}/${currentYear}\``
+  );
+
   const safeHistory = Array.isArray(history) ? history : [];
   const lastHistoryItem = safeHistory[safeHistory.length - 1];
   const priorHistory =
@@ -34,7 +44,13 @@ export async function llmRouter(
     max_tokens: 512,
     temperature: 0.2,
   });
-  const text = completion.choices[0]?.message?.content?.trim() || "";
+  let text = completion.choices[0]?.message?.content?.trim() || "";
+
+  // Replace placeholder with actual current month and year in code format just in case
+  text = text.replace(
+    /\*\*INSERT_CURRENT_DATE\*\*/g,
+    `\`${currentMonth}/${currentYear}\``
+  );
   let json: any;
   try {
     json = JSON.parse(text);
