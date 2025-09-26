@@ -81,11 +81,10 @@ export function UserStateProvider({ children }: { children: React.ReactNode }) {
     if (parsedKey) {
       setWithTTL("nvmApiKey", parsedKey);
       setApiKey(parsedKey);
+      console.log("🔑 Extracted API Key from URL:", parsedKey);
 
       // Dispatch event to resume pending chat action after checkout return
-      const event = new CustomEvent("checkout-return", {
-        detail: { apiKey: parsedKey },
-      });
+      const event = new CustomEvent("checkout-return");
       window.dispatchEvent(event);
     }
     const parsedPlan = extractPlanIdFromUrl(true);

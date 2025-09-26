@@ -24,7 +24,6 @@ export async function loadRuntimeConfig(): Promise<void> {
     // Return a promise that resolves when the script loads
     return new Promise((resolve, reject) => {
       script.onload = () => {
-        console.log("[AppConfig] Runtime configuration loaded successfully");
         resolve();
       };
       script.onerror = () => {
@@ -48,7 +47,6 @@ export async function loadRuntimeConfig(): Promise<void> {
  * First checks for runtime config, then falls back to build-time env vars
  */
 export function getAppConfig(): AppConfig {
-  // Try to get runtime config from window object (injected by server)
   const runtimeConfig = (window as any).__RUNTIME_CONFIG__;
 
   if (runtimeConfig) {
@@ -60,14 +58,8 @@ export function getAppConfig(): AppConfig {
     };
   }
 
-  // Fallback: determine transport based on current path and return empty config
-  // All configuration should come from the backend via /config.js
   const currentPath = window.location.pathname;
   const transport = currentPath.startsWith("/mcp-agent") ? "mcp" : "http";
-
-  console.warn(
-    `[AppConfig] No runtime config found. Make sure /config.js is loaded. Using fallback transport: ${transport}`
-  );
 
   return {
     transport,
