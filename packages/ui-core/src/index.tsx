@@ -7,6 +7,7 @@ import React, {
 } from "react";
 import { HttpPaymentsClient } from "@app/payments-client";
 import { getStoredPlanId, setStoredPlanId } from "./lib/utils";
+import { getWithTTL, setWithTTL } from "./lib/storage-utils";
 import type { PaymentsClient } from "@app/domain";
 
 function extractParamFromUrl(
@@ -54,9 +55,7 @@ export function useUserState(): UserState {
  * Provider for user state compatible with existing apps (localStorage nvmApiKey/nvmPlanId).
  */
 export function UserStateProvider({ children }: { children: React.ReactNode }) {
-  const [apiKey, setApiKey] = useState(
-    () => localStorage.getItem("nvmApiKey") || ""
-  );
+  const [apiKey, setApiKey] = useState(() => getWithTTL("nvmApiKey") || "");
   const [planId, setPlanId] = useState(() => getStoredPlanId());
   const [credits, setCredits] = useState<number | null>(null);
   const [initialized, setInitialized] = useState(false);
@@ -83,7 +82,7 @@ export function UserStateProvider({ children }: { children: React.ReactNode }) {
     (async () => {
       const apiFromUrl = extractParamFromUrl("nvm-api-key", true);
       if (apiFromUrl) {
-        localStorage.setItem("nvmApiKey", apiFromUrl);
+        setWithTTL("nvmApiKey", apiFromUrl);
         setApiKey(apiFromUrl);
       }
       const planFromUrl = extractParamFromUrl("planId", true);
@@ -101,7 +100,7 @@ export function UserStateProvider({ children }: { children: React.ReactNode }) {
     () => ({
       apiKey,
       setApiKey: (k: string) => {
-        localStorage.setItem("nvmApiKey", k);
+        setWithTTL("nvmApiKey", k);
         setApiKey(k);
       },
       planId,

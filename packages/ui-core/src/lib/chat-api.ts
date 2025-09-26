@@ -8,6 +8,7 @@
  * @returns Promise resolving to the current block number.
  */
 import { getStoredPlanId } from "./utils";
+import { getWithTTL } from "./storage-utils";
 import { getTransport } from "./config";
 
 /**
@@ -16,13 +17,8 @@ import { getTransport } from "./config";
  * @returns {Record<string, string>} Header object (possibly empty).
  */
 function getPlanIdHeader(): Record<string, string> {
-  try {
-    const planId: string = getStoredPlanId();
-    return planId ? { "X-Plan-Id": planId } : {};
-  } catch {
-    const legacy = getStoredPlanId();
-    return legacy ? { "X-Plan-Id": legacy } : {};
-  }
+  const planId: string = getStoredPlanId();
+  return planId ? { "X-Plan-Id": planId } : {};
 }
 
 export async function getCurrentBlockNumber(): Promise<number> {
@@ -49,7 +45,7 @@ export async function sendMessageToAgent(content: string): Promise<{
   txHash?: string;
   credits?: number;
 }> {
-  const apiKey = localStorage.getItem("nvmApiKey");
+  const apiKey = getWithTTL("nvmApiKey");
   const planId = getStoredPlanId() || "";
   const transport = getTransport();
   const response = await fetch("/api/agent", {
@@ -77,7 +73,7 @@ export async function sendMessageToAgent(content: string): Promise<{
  * @returns Promise resolving to the task.
  */
 export async function getTask(task_id: string): Promise<any> {
-  const apiKey = localStorage.getItem("nvmApiKey");
+  const apiKey = getWithTTL("nvmApiKey");
   const planId = getStoredPlanId() || "";
   const transport = getTransport();
   const response = await fetch(`/api/task?task_id=${task_id}`, {
@@ -103,7 +99,7 @@ export async function getTask(task_id: string): Promise<any> {
 export async function getBurnTransaction(
   blockNumber: number
 ): Promise<any | null> {
-  const apiKey = localStorage.getItem("nvmApiKey");
+  const apiKey = getWithTTL("nvmApiKey");
   const planId = getStoredPlanId() || "";
   const transport = getTransport();
   const burnTxResp = await fetch(`/api/find-burn-tx?fromBlock=${blockNumber}`, {
@@ -139,7 +135,7 @@ export async function updateCreditsAndGetBurnTx(
  * @returns Tools catalog including input schemas.
  */
 export async function listMcpToolsClient(): Promise<any> {
-  const apiKey = localStorage.getItem("nvmApiKey");
+  const apiKey = getWithTTL("nvmApiKey");
   const planId = getStoredPlanId() || "";
   const transport = getTransport();
   const resp = await fetch("/api/mcp/tools", {
@@ -165,7 +161,7 @@ export async function callMcpToolClient(
   tool: string,
   args: Record<string, any>
 ): Promise<{ response: string; content?: any }> {
-  const apiKey = localStorage.getItem("nvmApiKey");
+  const apiKey = getWithTTL("nvmApiKey");
   const planId = getStoredPlanId() || "";
   const transport = getTransport();
   const resp = await fetch("/api/mcp/tool", {

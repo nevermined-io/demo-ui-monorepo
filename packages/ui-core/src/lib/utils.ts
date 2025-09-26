@@ -1,7 +1,7 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { getTransport } from "./config";
-// Removed loadRuntimeConfig import - using environment variables directly
+import { getWithTTL, setWithTTL } from "./storage-utils";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -133,9 +133,8 @@ export function getPlanIdStorageKey(): string {
 export function getStoredPlanId(): string {
   try {
     const scopedKey = getPlanIdStorageKey();
-    const scopedValue = localStorage.getItem(scopedKey);
-    const legacyValue = localStorage.getItem("nvmPlanId");
-    return scopedValue || legacyValue || "";
+    const scopedValue = getWithTTL(scopedKey);
+    return scopedValue || "";
   } catch (error) {
     console.warn("[getStoredPlanId] Error:", error);
     return "";
@@ -151,7 +150,7 @@ export function getStoredPlanId(): string {
 export function setStoredPlanId(planId: string): void {
   try {
     const scopedKey = getPlanIdStorageKey();
-    localStorage.setItem(scopedKey, planId);
+    setWithTTL(scopedKey, planId);
   } catch (error) {
     console.warn("[setStoredPlanId] Error:", error);
   }

@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { formatChatText } from "@/lib/text-formatter";
 import { Message } from "@shared/schema";
 import { useEffect, useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
@@ -13,38 +14,6 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
   const [displayText, setDisplayText] = useState("");
   const [isCollapsed, setIsCollapsed] = useState(false);
   const words = message.content.split(" ");
-
-  // Function to convert URLs in text to clickable links
-  const createClickableLinks = (text: string) => {
-    const urlRegex = /(https?:\/\/[^\s]+)/g;
-    return text.split(urlRegex).map((part, index) => {
-      if (part.match(urlRegex)) {
-        let target: undefined | string = "_blank";
-        try {
-          const u = new URL(part);
-          if (
-            u.hostname.endsWith("nevermined.dev") ||
-            u.hostname.endsWith("nevermined.app")
-          ) {
-            target = undefined;
-          }
-        } catch {}
-        return (
-          <a
-            key={index}
-            href={part}
-            target={target}
-            rel="noopener noreferrer"
-            className="text-blue-400 hover:underline"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {part}
-          </a>
-        );
-      }
-      return part;
-    });
-  };
 
   useEffect(() => {
     if (!message.isUser) {
@@ -89,10 +58,10 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
         !message.isUser && message.type === "reasoning"
           ? "bg-muted text-muted-foreground"
           : !message.isUser && message.type === "answer"
-          ? "bg-card text-card-foreground"
-          : !message.isUser && message.type === "notice"
-          ? "bg-white/60 text-foreground border border-border backdrop-blur"
-          : ""
+            ? "bg-card text-card-foreground"
+            : !message.isUser && message.type === "notice"
+              ? "bg-white/60 text-foreground border border-border backdrop-blur"
+              : ""
       )}
     >
       {!message.isUser && message.type === "reasoning" && (
@@ -105,7 +74,7 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
           <ChevronUp className="w-4 h-4" />
         </Button>
       )}
-      <div>{createClickableLinks(displayText)}</div>
+      <div>{formatChatText(displayText)}</div>
     </motion.div>
   );
 }

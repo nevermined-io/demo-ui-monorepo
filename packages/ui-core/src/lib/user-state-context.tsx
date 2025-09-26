@@ -5,6 +5,7 @@ import {
   getStoredPlanId,
   setStoredPlanId,
 } from "./utils";
+import { getWithTTL, setWithTTL } from "./storage-utils";
 import { useAppConfig } from "./config";
 
 /**
@@ -36,9 +37,7 @@ export function useUserState() {
 
 export function UserStateProvider({ children }: { children: React.ReactNode }) {
   // Synchronous initialization
-  const [apiKey, setApiKey] = useState(
-    () => localStorage.getItem("nvmApiKey") || ""
-  );
+  const [apiKey, setApiKey] = useState(() => getWithTTL("nvmApiKey") || "");
   const [planId, setPlanId] = useState<string>(() => getStoredPlanId());
   const [credits, setCredits] = useState<number | null>(null);
   const [initialized, setInitialized] = useState(false);
@@ -80,13 +79,12 @@ export function UserStateProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const parsedKey = extractApiKeyFromUrl(true);
     if (parsedKey) {
-      localStorage.setItem("nvmApiKey", parsedKey);
+      setWithTTL("nvmApiKey", parsedKey);
       setApiKey(parsedKey);
+      console.log("🔑 Extracted API Key from URL:", parsedKey);
 
       // Dispatch event to resume pending chat action after checkout return
-      const event = new CustomEvent("checkout-return", {
-        detail: { apiKey: parsedKey },
-      });
+      const event = new CustomEvent("checkout-return");
       window.dispatchEvent(event);
     }
     const parsedPlan = extractPlanIdFromUrl(true);

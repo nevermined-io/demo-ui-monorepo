@@ -39,6 +39,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const hydratedRef = useRef(false);
   const loadingRef = useRef(false);
   const processingPendingActionRef = useRef(false);
+  const initialLoadRef = useRef(true);
 
   useEffect(() => {
     // Use the centralized configuration system
@@ -103,11 +104,17 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const LS_CURRENT_CONV_ID_KEY = `${LS_PREFIX}_current_conversation_id`;
 
   useEffect(() => {
-    // Special warning when messages become empty
-    if (messages.length === 0 && hydratedRef.current) {
+    if (
+      messages.length === 0 &&
+      hydratedRef.current &&
+      !initialLoadRef.current
+    ) {
       console.warn("[ChatProvider] ⚠️ Messages became empty after hydration!", {
         stackTrace: new Error().stack,
       });
+    }
+    if (hydratedRef.current) {
+      initialLoadRef.current = false;
     }
   }, [messages]);
 
@@ -289,12 +296,15 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     };
 
     const checkoutReturnHandler = () => {
-      // Small delay to ensure the page is fully loaded
-      setTimeout(processPendingAction, 100);
+      console.log("🔑 Checkout return event received");
+      // The actual processing will happen in the useEffect when apiKey changes
     };
 
     // Check for pending action immediately on mount (in case event was already fired)
-    setTimeout(processPendingAction, 200);
+    // Only process if we have an API key
+    if (apiKey) {
+      setTimeout(processPendingAction, 200);
+    }
 
     window.addEventListener(
       "resume-chat-action",
@@ -315,24 +325,56 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         checkoutReturnHandler as EventListener
       );
     };
-  }, []);
+  }, [apiKey]); // Add apiKey as dependency
+
+  // Process pending action when API key becomes available
+  useEffect(() => {
+    if (apiKey) {
+      const pendingAction = localStorage.getItem("pendingChatAction");
+      if (pendingAction) {
+        console.log("🔑 API key available, processing pending action");
+        const action = JSON.parse(pendingAction);
+        if (
+          action.type === "sendMessage" &&
+          typeof action.content === "string"
+        ) {
+          // Set flag to indicate we're processing a pending action
+          processingPendingActionRef.current = true;
+          // Clear the pending action first to prevent duplicates
+          localStorage.removeItem("pendingChatAction");
+          // Execute the pending action
+          sendMessage(action.content);
+          // Reset flag after a short delay
+          setTimeout(() => {
+            processingPendingActionRef.current = false;
+          }, 1000);
+        }
+      }
+    }
+  }, [apiKey]);
 
   const sendMessage = async (content: string) => {
     setIsStoredConversation(false);
 
-    // Add the user message to the chat
-    const userMessage: FullMessage = {
-      id: messages.length,
-      content,
-      type: "answer",
-      isUser: true,
-      conversationId: currentConversationId?.toString() || "new",
-      timestamp: new Date(),
-    };
-    setMessages((prev) => [...prev, userMessage]);
+    // Add the user message to the chat only if we're not processing a pending action
+    // (to avoid duplicating the message when resuming from checkout)
+    let userMessage: FullMessage | null = null;
+    if (!processingPendingActionRef.current) {
+      userMessage = {
+        id: messages.length,
+        content,
+        type: "answer",
+        isUser: true,
+        conversationId: currentConversationId?.toString() || "new",
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, userMessage!]);
+    }
 
     // Build LLM history including the latest user message
-    const completeMessages = [...messages, userMessage];
+    const completeMessages = userMessage
+      ? [...messages, userMessage]
+      : [...messages];
     const llmHistory = completeMessages.map((m) => ({
       role: m.isUser ? "user" : "assistant",
       content: m.content,
@@ -421,6 +463,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           const checkoutUrl = buildNeverminedCheckoutUrl(agentId, {
             returnApiKey: needsApiKey,
           });
+          console.log("🔑 needsApiKey:", needsApiKey);
+          console.log("💰 insufficientCredits:", insufficientCredits);
+          console.log("🔗 checkoutUrl:", checkoutUrl);
           setMessages((prev) => [
             ...prev,
             {
