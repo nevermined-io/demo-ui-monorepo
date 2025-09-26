@@ -159,7 +159,7 @@ export async function getUserCredits(
   nvmApiKey: string,
   planId: string
 ): Promise<number> {
-  const environment = process.env.NVM_ENVIRONMENT || "staging_sandbox";
+  const environment = process.env.NVM_ENVIRONMENT || "sandbox";
   if (!nvmApiKey || !planId) {
     throw new Error("Missing Nevermined API key or plan DID");
   }

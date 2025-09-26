@@ -37,7 +37,7 @@
     ENV MCP_AGENT_ENDPOINT=${MCP_AGENT_ENDPOINT}
     
     # Server environment variables
-    ARG NVM_ENVIRONMENT="staging_sandbox"
+    ARG NVM_ENVIRONMENT="sandbox"
     ENV NVM_ENVIRONMENT=${NVM_ENVIRONMENT}
     
     # API Keys and external services

@@ -40,7 +40,7 @@ export function loadAgentConfig(transport: "http" | "mcp"): AgentConfig {
   const agentEndpoint =
     transport === "http" ? env.HTTP_AGENT_ENDPOINT : env.MCP_AGENT_ENDPOINT;
 
-  const environment = env.NVM_ENVIRONMENT || "staging_sandbox";
+  const environment = env.NVM_ENVIRONMENT || "sandbox";
 
   return {
     id: agentId || defaultAgent.id,
