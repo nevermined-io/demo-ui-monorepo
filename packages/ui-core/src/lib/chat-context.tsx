@@ -356,19 +356,25 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const sendMessage = async (content: string) => {
     setIsStoredConversation(false);
 
-    // Add the user message to the chat
-    const userMessage: FullMessage = {
-      id: messages.length,
-      content,
-      type: "answer",
-      isUser: true,
-      conversationId: currentConversationId?.toString() || "new",
-      timestamp: new Date(),
-    };
-    setMessages((prev) => [...prev, userMessage]);
+    // Add the user message to the chat only if we're not processing a pending action
+    // (to avoid duplicating the message when resuming from checkout)
+    let userMessage: FullMessage | null = null;
+    if (!processingPendingActionRef.current) {
+      userMessage = {
+        id: messages.length,
+        content,
+        type: "answer",
+        isUser: true,
+        conversationId: currentConversationId?.toString() || "new",
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, userMessage!]);
+    }
 
     // Build LLM history including the latest user message
-    const completeMessages = [...messages, userMessage];
+    const completeMessages = userMessage
+      ? [...messages, userMessage]
+      : [...messages];
     const llmHistory = completeMessages.map((m) => ({
       role: m.isUser ? "user" : "assistant",
       content: m.content,
