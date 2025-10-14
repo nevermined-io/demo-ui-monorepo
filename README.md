@@ -36,6 +36,13 @@ The platform acts as a **proxy and orchestration layer** between frontend applic
 - **Development Platform**: Enable rapid prototyping of agent-based applications
 - **Payment Integration**: Demonstrate blockchain-based credit systems for AI services
 
+### Demo Agents
+
+The external agents used in this demo are available in the [Nevermined Tutorials repository](https://github.com/nevermined-io/tutorials), which contains comprehensive examples of how to build and integrate AI agents with Nevermined Payments:
+
+- **[Financial Agent](https://github.com/nevermined-io/tutorials/tree/main/financial-agent)** - HTTP REST agent for financial advice
+- **[Weather MCP Agent](https://github.com/nevermined-io/tutorials/tree/main/mcp-examples/weather-mcp)** - MCP agent for weather information
+
 ## Technical Architecture
 
 ### Core Technologies
