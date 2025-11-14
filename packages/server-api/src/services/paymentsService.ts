@@ -395,7 +395,7 @@ export async function getBurnTransactionInfo(
   nvmApiKey: string,
   planId: string
 ): Promise<{ txHash: string; credits: string; planId: string } | null> {
-  const environment = process.env.NVM_ENVIRONMENT || "testing";
+  const environment = process.env.NVM_ENVIRONMENT || "staging_sandbox";
   if (!nvmApiKey || !planId) throw new Error("Missing config");
   const payments = initializePayments(nvmApiKey, environment);
   const planHelper = new PlanDDOHelper(payments, planId);
@@ -441,7 +441,7 @@ export async function getPlanCost(
   nvmApiKey: string,
   planId: string
 ): Promise<{ planPrice: string; planCredits: number }> {
-  const environment = process.env.NVM_ENVIRONMENT || "testing";
+  const environment = process.env.NVM_ENVIRONMENT || "staging_sandbox";
   if (!nvmApiKey || !planId) throw new Error("Missing config");
   const payments = initializePayments(nvmApiKey, environment);
   const planHelper = new PlanDDOHelper(payments, planId);
@@ -457,7 +457,7 @@ export async function redeemCredits(
   creditsAmount: string,
   nvmApiKey: string
 ): Promise<{ success: boolean; txHash?: string | undefined; message: string }> {
-  const environment = process.env.NVM_ENVIRONMENT || "testing";
+  const environment = process.env.NVM_ENVIRONMENT || "staging_sandbox";
   const agentId = process.env.AGENT_DID;
   if (!nvmApiKey || !planId || !agentId) {
     throw new Error("Missing Nevermined API key or plan DID");

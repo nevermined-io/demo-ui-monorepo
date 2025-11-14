@@ -72,7 +72,7 @@ export async function llmTitleSummarizer(
   history: { role: string; content: string }[]
 ): Promise<string> {
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  const prompt = `You are generating a concise title for a financial advice/analysis conversation. Produce a short, clear title (6-10 words) that captures the user's financial goal or topic. Prefer including concrete assets/tickers (e.g., BTC, ETH, AAPL), markets (crypto, stocks), timeframe (short/long term) or action (analyze, compare, portfolio). Use Title Case, no emojis, and no trailing period.\n\nConversation history:\n${history
+  const prompt = `You are generating a concise title for a conversation. Produce a short, clear title (3-8 words) that captures the main topic or subject of the conversation. Include key entities, locations, or concepts mentioned (e.g., "Weather in Madrid", "Python Tutorial", "Recipe for Pasta"). Use Title Case, no emojis, and no trailing period.\n\nConversation history:\n${history
     .map(
       (msg) => `${msg.role === "user" ? "User" : "Assistant"}: ${msg.content}`
     )
@@ -83,7 +83,7 @@ export async function llmTitleSummarizer(
       {
         role: "system",
         content:
-          "You create short, professional titles for financial advice and market analysis chats. Favor assets, markets, timeframes, or actions. Use Title Case, avoid emojis and terminal punctuation.",
+          "You create short, professional titles for conversations on any topic. Capture the main subject, key entities, or central theme. Use Title Case, avoid emojis and terminal punctuation.",
       },
       { role: "user", content: prompt },
     ],
