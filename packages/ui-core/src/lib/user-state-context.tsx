@@ -18,7 +18,7 @@ interface UserStateContextType {
   setApiKey: (key: string) => void;
   credits: number | null;
   setCredits: (c: number | null) => void;
-  refreshCredits: () => Promise<void>;
+  refreshCredits: () => Promise<number | null>;
   initialized: boolean;
   planId: string;
   setPlanId: (planId: string) => void;
@@ -42,12 +42,12 @@ export function UserStateProvider({ children }: { children: React.ReactNode }) {
   const [credits, setCredits] = useState<number | null>(null);
   const [initialized, setInitialized] = useState(false);
 
-  // Refreshes the credits from the backend
-  const refreshCredits = async () => {
+  // Refreshes the credits from the backend and returns the updated value
+  const refreshCredits = async (): Promise<number | null> => {
     try {
       if (!apiKey) {
         setCredits(null);
-        return;
+        return null;
       }
       const planIdHeader = getStoredPlanId();
       const { transport } = useAppConfig();
@@ -60,9 +60,12 @@ export function UserStateProvider({ children }: { children: React.ReactNode }) {
       });
       if (!resp.ok) throw new Error();
       const data = await resp.json();
-      setCredits(typeof data.credit === "number" ? data.credit : null);
+      const creditValue = typeof data.credit === "number" ? data.credit : null;
+      setCredits(creditValue);
+      return creditValue;
     } catch {
       setCredits(null);
+      return null;
     }
   };
 

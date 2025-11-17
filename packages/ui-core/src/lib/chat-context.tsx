@@ -20,14 +20,18 @@ import {
   intentSynthesizeRequest,
   getPlanCostRequest,
 } from "./chat-requests";
-import { buildNeverminedCheckoutUrl } from "./utils";
+import {
+  buildNeverminedCheckoutUrl,
+  extractPlanIdFromUrl,
+  extractApiKeyFromUrl,
+} from "./utils";
 import { useUserState } from "./user-state-context";
 import { useAppConfig } from "./config";
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 export function ChatProvider({ children }: { children: ReactNode }) {
-  const { apiKey, credits, refreshCredits } = useUserState();
+  const { apiKey, credits, refreshCredits, initialized } = useUserState();
   const appConfig = useAppConfig();
   const [messages, setMessages] = useState<FullMessage[]>([]);
 
@@ -40,6 +44,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const loadingRef = useRef(false);
   const processingPendingActionRef = useRef(false);
   const initialLoadRef = useRef(true);
+  const waitingForCreditsRef = useRef(false);
 
   useEffect(() => {
     // Use the centralized configuration system
@@ -250,38 +255,55 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     // This function is kept for compatibility but no longer needed
   };
 
+  /**
+   * Waits for credits to be available after checkout return.
+   * Uses polling with a timeout to handle cases where the user canceled the purchase.
+   * @param {() => number | null} getCredits - Function to get current credits value
+   * @param {() => boolean} getInitialized - Function to get current initialized state
+   * @param {number} timeoutMs - Maximum time to wait in milliseconds (default: 8000ms)
+   * @param {number} pollIntervalMs - Interval between credit checks in milliseconds (default: 500ms)
+   * @returns {Promise<number | null>} The credits value if available (> 0), null if timeout or no credits
+   */
+  const waitForCreditsAfterCheckout = async (
+    getCredits: () => number | null,
+    getInitialized: () => boolean,
+    timeoutMs: number = 8000,
+    pollIntervalMs: number = 500
+  ): Promise<number | null> => {
+    const startTime = Date.now();
+
+    // First, wait for initialization to complete
+    while (!getInitialized() && Date.now() - startTime < timeoutMs) {
+      await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+    }
+
+    if (!getInitialized()) {
+      console.warn("[ChatProvider] Timeout waiting for initialization");
+      return null;
+    }
+
+    // Then poll for credits to be available
+    while (Date.now() - startTime < timeoutMs) {
+      // Refresh credits and get the latest value directly (not from state)
+      const refreshedCredits = await refreshCredits();
+
+      if (refreshedCredits !== null && refreshedCredits > 0) {
+        return refreshedCredits;
+      }
+
+      // If credits are still null or 0, wait before next poll
+      await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+    }
+
+    // Timeout reached - user likely canceled the purchase
+    console.warn(
+      "[ChatProvider] Timeout waiting for credits after checkout return"
+    );
+    return null;
+  };
+
   // Resume pending action after returning from checkout
   useEffect(() => {
-    const processPendingAction = () => {
-      try {
-        const pendingAction = localStorage.getItem("pendingChatAction");
-        if (pendingAction) {
-          const action = JSON.parse(pendingAction);
-          if (
-            action.type === "sendMessage" &&
-            typeof action.content === "string"
-          ) {
-            // Set flag to indicate we're processing a pending action
-            processingPendingActionRef.current = true;
-            // Clear the pending action first to prevent duplicates
-            localStorage.removeItem("pendingChatAction");
-            // Execute the pending action
-            sendMessage(action.content);
-            // Reset flag after a short delay
-            setTimeout(() => {
-              processingPendingActionRef.current = false;
-            }, 1000);
-          }
-        }
-      } catch (error) {
-        console.error(
-          "[ChatProvider] Error processing pending chat action:",
-          error
-        );
-        processingPendingActionRef.current = false;
-      }
-    };
-
     const resumeHandler = (e: Event) => {
       const detail: any = (e as CustomEvent).detail;
       if (
@@ -299,12 +321,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       console.log("🔑 Checkout return event received");
       // The actual processing will happen in the useEffect when apiKey changes
     };
-
-    // Check for pending action immediately on mount (in case event was already fired)
-    // Only process if we have an API key
-    if (apiKey) {
-      setTimeout(processPendingAction, 200);
-    }
 
     window.addEventListener(
       "resume-chat-action",
@@ -325,33 +341,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         checkoutReturnHandler as EventListener
       );
     };
-  }, [apiKey]); // Add apiKey as dependency
-
-  // Process pending action when API key becomes available
-  useEffect(() => {
-    if (apiKey) {
-      const pendingAction = localStorage.getItem("pendingChatAction");
-      if (pendingAction) {
-        console.log("🔑 API key available, processing pending action");
-        const action = JSON.parse(pendingAction);
-        if (
-          action.type === "sendMessage" &&
-          typeof action.content === "string"
-        ) {
-          // Set flag to indicate we're processing a pending action
-          processingPendingActionRef.current = true;
-          // Clear the pending action first to prevent duplicates
-          localStorage.removeItem("pendingChatAction");
-          // Execute the pending action
-          sendMessage(action.content);
-          // Reset flag after a short delay
-          setTimeout(() => {
-            processingPendingActionRef.current = false;
-          }, 1000);
-        }
-      }
-    }
-  }, [apiKey]);
+  }, []);
 
   const sendMessage = async (content: string) => {
     setIsStoredConversation(false);
@@ -412,6 +402,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           "pendingChatAction",
           JSON.stringify({ type: "sendMessage", content })
         );
+        // Mark that we're going to checkout (for detection on return)
+        localStorage.setItem("checkoutPending", "true");
 
         // Show a message with a clickable checkout link instead of redirecting
         setMessages((prev) => [
@@ -483,6 +475,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
             "pendingChatAction",
             JSON.stringify({ type: "sendMessage", content })
           );
+          // Mark that we're going to checkout (for detection on return)
+          localStorage.setItem("checkoutPending", "true");
           return;
         } catch {
           setMessages((prev) => [
@@ -709,6 +703,126 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       ]);
     }
   };
+
+  // Process pending action when API key becomes available after checkout return
+  useEffect(() => {
+    // Only process if we have an API key and we're not already waiting for credits
+    if (!apiKey || waitingForCreditsRef.current) {
+      return;
+    }
+
+    const pendingAction = localStorage.getItem("pendingChatAction");
+    if (!pendingAction) {
+      return;
+    }
+
+    // Check if we just returned from checkout
+    // Check for URL parameters first, then fallback to localStorage flag
+    const hasPlanIdInUrl = Boolean(extractPlanIdFromUrl(false));
+    const hasApiKeyInUrl = Boolean(extractApiKeyFromUrl(false));
+    const checkoutPendingFlag =
+      localStorage.getItem("checkoutPending") === "true";
+    const hasReturnedFromCheckout =
+      hasPlanIdInUrl || hasApiKeyInUrl || checkoutPendingFlag;
+
+    // Clear the checkout pending flag if we're processing
+    if (checkoutPendingFlag) {
+      localStorage.removeItem("checkoutPending");
+    }
+
+    if (!hasReturnedFromCheckout) {
+      // Not returning from checkout, process immediately
+      try {
+        const action = JSON.parse(pendingAction);
+        if (
+          action.type === "sendMessage" &&
+          typeof action.content === "string"
+        ) {
+          processingPendingActionRef.current = true;
+          localStorage.removeItem("pendingChatAction");
+          sendMessage(action.content);
+          setTimeout(() => {
+            processingPendingActionRef.current = false;
+          }, 1000);
+        }
+      } catch (error) {
+        console.error("[ChatProvider] Error processing pending action:", error);
+        localStorage.removeItem("pendingChatAction");
+      }
+      return;
+    }
+
+    // We're returning from checkout - wait for credits with timeout
+    console.log("🔑 Processing pending action after checkout return");
+    waitingForCreditsRef.current = true;
+
+    const processAfterCheckout = async () => {
+      try {
+        // Wait for credits to be available (with timeout for cancellation case)
+        // Pass functions to get current credits and initialized state
+        const finalCredits = await waitForCreditsAfterCheckout(
+          () => credits,
+          () => initialized
+        );
+
+        const action = JSON.parse(pendingAction);
+        if (
+          action.type === "sendMessage" &&
+          typeof action.content === "string"
+        ) {
+          // Use the credits returned from waitForCreditsAfterCheckout
+          // which gets them directly from refreshCredits() return value
+          if (finalCredits !== null && finalCredits > 0) {
+            // Credits are available - execute the pending action
+            console.log(
+              `✅ Credits available (${finalCredits}), executing pending action`
+            );
+            processingPendingActionRef.current = true;
+            localStorage.removeItem("pendingChatAction");
+            sendMessage(action.content);
+            setTimeout(() => {
+              processingPendingActionRef.current = false;
+            }, 1000);
+          } else {
+            // No credits available - user likely canceled the purchase
+            console.log(
+              "⚠️ No credits available after checkout return - purchase may have been canceled"
+            );
+            localStorage.removeItem("pendingChatAction");
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: prev.length + 1,
+                content:
+                  "Purchase was not completed. Please complete the checkout to continue.",
+                type: "notice",
+                isUser: false,
+                conversationId: currentConversationId?.toString() || "new",
+                timestamp: new Date(),
+              },
+            ]);
+          }
+        }
+      } catch (error) {
+        console.error(
+          "[ChatProvider] Error processing pending action after checkout:",
+          error
+        );
+        localStorage.removeItem("pendingChatAction");
+      } finally {
+        waitingForCreditsRef.current = false;
+      }
+    };
+
+    processAfterCheckout();
+  }, [
+    apiKey,
+    initialized,
+    credits,
+    refreshCredits,
+    sendMessage,
+    currentConversationId,
+  ]);
 
   const loadStoredMessages = (conversationId: number) => {
     const storedConversationMessages = storedMessages[conversationId];
