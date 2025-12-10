@@ -10,6 +10,8 @@ import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { motion } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { getAppConfig } from "@/lib/config";
 
 /**
  * MessageGroupProps for displaying a group of messages.
@@ -162,6 +164,41 @@ export default function MessageGroup({
                 </div>
               );
             }
+            if (message.type === "authorize") {
+              const authUrl = (message as any).metadata?.authUrl;
+
+              // Check if user is already authenticated (to prevent CSRF errors on page reload)
+              const isAlreadyAuthenticated =
+                !!localStorage.getItem("mcp_access_token");
+
+              return (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4 }}
+                  className="flex flex-col gap-4 bg-white/60 text-card-foreground border border-border rounded-lg p-4 backdrop-blur"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm">{text}</span>
+                  </div>
+                  {authUrl && (
+                    <Button
+                      onClick={() => {
+                        if (!isAlreadyAuthenticated) {
+                          window.location.href = authUrl;
+                        }
+                      }}
+                      disabled={isAlreadyAuthenticated}
+                      className="w-full sm:w-auto bg-[#0D3F48] hover:bg-[#0D3F48]/90 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                      size="lg"
+                    >
+                      {isAlreadyAuthenticated ? "Already Connected" : "Connect"}
+                    </Button>
+                  )}
+                </motion.div>
+              );
+            }
             if (message.type === "thinking") {
               return (
                 <div
@@ -182,9 +219,9 @@ export default function MessageGroup({
                * @param {FullMessage} message
                */
               const explorerUrl = `https://base-sepolia.blockscout.com/tx/${message.txHash}`;
+              const { environment } = getAppConfig();
               const basePlanUrl =
-                ((globalThis as any)?.__RUNTIME_CONFIG__?.environment ||
-                  "sandbox") === "sandbox"
+                environment === "sandbox"
                   ? "https://nevermined.app/en/plan/"
                   : "https://nevermined.dev/en/plan/";
               const credits = Number(message.credits);

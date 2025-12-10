@@ -38,22 +38,43 @@ export async function getCurrentBlockNumber(): Promise<number> {
 /**
  * Send a message to the agent via backend proxy and return the response.
  * @param content The user message to send.
+ * @param mcpAccessToken Optional OAuth access token for MCP agent
  * @returns Promise resolving to the agent response.
  */
-export async function sendMessageToAgent(content: string): Promise<{
+export async function sendMessageToAgent(
+  content: string,
+  mcpAccessToken?: string | null
+): Promise<{
   response: string;
   txHash?: string;
   credits?: number;
 }> {
-  const apiKey = getWithTTL("nvmApiKey");
-  const planId = getStoredPlanId() || "";
   const transport = getTransport();
+
+  // Determine which credential to use based on transport
+  let authToken = "";
+  let planIdValue = "";
+
+  if (transport === "http") {
+    // HTTP Agent uses Nevermined API Key
+    authToken = getWithTTL("nvmApiKey") || "";
+    planIdValue = getStoredPlanId() || "";
+  } else if (transport === "mcp") {
+    // MCP Agent uses OAuth access token
+    if (!mcpAccessToken) {
+      throw new Error("MCP access token required for MCP agent");
+    }
+    authToken = mcpAccessToken;
+    // No se necesita planId para MCP OAuth
+    planIdValue = "";
+  }
+
   const response = await fetch("/api/agent", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
-      ...(planId ? { "X-Plan-Id": planId } : {}),
+      ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+      ...(planIdValue ? { "X-Plan-Id": planIdValue } : {}),
       "X-Agent-Mode": transport,
     },
     body: JSON.stringify({ input_query: content }),
@@ -132,18 +153,16 @@ export async function updateCreditsAndGetBurnTx(
 
 /**
  * Lists available MCP tools via backend proxy.
+ * @param mcpAccessToken OAuth access token for MCP agent
  * @returns Tools catalog including input schemas.
  */
-export async function listMcpToolsClient(): Promise<any> {
-  const apiKey = getWithTTL("nvmApiKey");
-  const planId = getStoredPlanId() || "";
+export async function listMcpToolsClient(mcpAccessToken: string): Promise<any> {
   const transport = getTransport();
   const resp = await fetch("/api/mcp/tools", {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
-      ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
-      ...(planId ? { "X-Plan-Id": planId } : {}),
+      Authorization: `Bearer ${mcpAccessToken}`,
       "X-Agent-Mode": transport,
     },
   });
@@ -155,21 +174,20 @@ export async function listMcpToolsClient(): Promise<any> {
  * Calls a specific MCP tool via backend proxy.
  * @param tool MCP tool name (e.g. "weather.today")
  * @param args Arguments object matching the tool's input schema
+ * @param mcpAccessToken OAuth access token for MCP agent
  * @returns Normalized response with text output
  */
 export async function callMcpToolClient(
   tool: string,
-  args: Record<string, any>
+  args: Record<string, any>,
+  mcpAccessToken: string
 ): Promise<{ response: string; content?: any }> {
-  const apiKey = getWithTTL("nvmApiKey");
-  const planId = getStoredPlanId() || "";
   const transport = getTransport();
   const resp = await fetch("/api/mcp/tool", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
-      ...(planId ? { "X-Plan-Id": planId } : {}),
+      Authorization: `Bearer ${mcpAccessToken}`,
       "X-Agent-Mode": transport,
     },
     body: JSON.stringify({ tool, args }),

@@ -7,6 +7,7 @@ export async function llmRouter(
   message: string,
   history: any[],
   credits: number,
+  isAuthenticated: boolean,
   basePrompt: string
 ): Promise<{ action: string; message?: string }> {
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -31,7 +32,17 @@ export async function llmRouter(
     (lastHistoryItem as any).content === message
       ? safeHistory.slice(0, -1)
       : safeHistory;
-  const systemContent = `${basePrompt}\n\nConversation history (for context):\n${JSON.stringify(priorHistory)}\n\nUser credits: ${credits}`;
+
+  // Build system content with authentication status
+  const authStatus = isAuthenticated ? "authenticated" : "not_authenticated";
+  const systemContent = `${basePrompt}
+
+User authentication: ${authStatus}
+User credits: ${credits}
+
+Conversation history (for context):
+${JSON.stringify(priorHistory)}`;
+
   const completion = await openai.chat.completions.create({
     model: "gpt-4.1",
     messages: [

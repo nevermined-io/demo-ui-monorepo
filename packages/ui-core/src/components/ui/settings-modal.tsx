@@ -50,6 +50,7 @@ function SettingsModalContent({
     planId,
     setPlanId,
   } = useUserState();
+  const { transport } = useAppConfig();
   const [touched, setTouched] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -158,58 +159,68 @@ function SettingsModalContent({
         <DialogHeader className="min-w-0">
           <DialogTitle>Settings</DialogTitle>
         </DialogHeader>
-        <div className="p-4 rounded-lg border bg-muted/40 w-full max-w-full min-w-0 break-words">
-          <div className="mb-2">
-            <div className="text-base font-medium">Nevermined API Key</div>
-            <div className="text-xs text-muted-foreground">
-              Enter your Nevermined API Key. With this key, you will be able to
-              interact with a swarm of agents that will create a music video
-              based on your prompt.
+        {/* HTTP Agent Settings - Only shown for HTTP transport */}
+        {transport === "http" && (
+          <>
+            <div className="p-4 rounded-lg border bg-muted/40 w-full max-w-full min-w-0 break-words">
+              <div className="mb-2">
+                <div className="text-base font-medium">Nevermined API Key</div>
+                <div className="text-xs text-muted-foreground">
+                  Enter your Nevermined API Key. With this key, you will be able
+                  to interact with a swarm of agents that will create a music
+                  video based on your prompt.
+                </div>
+              </div>
+              <Input
+                type="text"
+                placeholder="Enter your NVM API Key"
+                value={apiKey}
+                onChange={(e) => {
+                  setApiKey(e.target.value);
+                  setTouched(true);
+                  setError("");
+                }}
+                className="w-full"
+                autoFocus
+                disabled={loading}
+              />
+              {error && (
+                <div className="text-red-600 text-sm mt-2">{error}</div>
+              )}
             </div>
-          </div>
-          <Input
-            type="text"
-            placeholder="Enter your NVM API Key"
-            value={apiKey}
-            onChange={(e) => {
-              setApiKey(e.target.value);
-              setTouched(true);
-              setError("");
-            }}
-            className="w-full"
-            autoFocus
-            disabled={loading}
-          />
-          {error && <div className="text-red-600 text-sm mt-2">{error}</div>}
-        </div>
-        <div className="mt-4 p-4 rounded-lg border bg-muted/40 w-full max-w-full min-w-0 break-words">
-          <div className="mb-2">
-            <div className="text-base font-medium">Plan ID</div>
-            <div className="text-xs text-muted-foreground">
-              Enter the Plan DID to be used for credit checks and burns. You can
-              override the current value returned from checkout here.
+            <div className="mt-4 p-4 rounded-lg border bg-muted/40 w-full max-w-full min-w-0 break-words">
+              <div className="mb-2">
+                <div className="text-base font-medium">Plan ID</div>
+                <div className="text-xs text-muted-foreground">
+                  Enter the Plan DID to be used for credit checks and burns. You
+                  can override the current value returned from checkout here.
+                </div>
+              </div>
+              <Input
+                type="text"
+                placeholder="Enter Plan DID"
+                value={localPlanId}
+                onChange={(e) => {
+                  setLocalPlanId(e.target.value);
+                  setTouched(true);
+                }}
+                className="w-full"
+                disabled={loading}
+              />
+              <div className="text-xs text-muted-foreground mt-1">
+                Current plan: {planId || "(none)"}
+              </div>
+              <DialogFooter className="mt-2 min-w-0">
+                <Button
+                  onClick={handleSave}
+                  disabled={!apiKey.trim() || loading}
+                >
+                  {loading ? "Validating..." : "Save"}
+                </Button>
+              </DialogFooter>
             </div>
-          </div>
-          <Input
-            type="text"
-            placeholder="Enter Plan DID"
-            value={localPlanId}
-            onChange={(e) => {
-              setLocalPlanId(e.target.value);
-              setTouched(true);
-            }}
-            className="w-full"
-            disabled={loading}
-          />
-          <div className="text-xs text-muted-foreground mt-1">
-            Current plan: {planId || "(none)"}
-          </div>
-          <DialogFooter className="mt-2 min-w-0">
-            <Button onClick={handleSave} disabled={!apiKey.trim() || loading}>
-              {loading ? "Validating..." : "Save"}
-            </Button>
-          </DialogFooter>
-        </div>
+          </>
+        )}
         {/* <div className="p-4 rounded-lg border bg-muted/40">
           <div className="font-semibold mb-2">Burn credits</div>
           <div className="text-xs text-muted-foreground mb-4">

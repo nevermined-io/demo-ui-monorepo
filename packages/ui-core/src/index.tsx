@@ -127,4 +127,5 @@ export { HttpPaymentsClient };
 export { Button } from "./components/ui/button";
 export { Badge } from "./components/ui/badge";
 export { getStoredPlanId, setStoredPlanId } from "./lib/utils";
-export { useAppConfig, getTransport, loadRuntimeConfig } from "./lib/config";
+export { useAppConfig, getTransport, getAppConfig } from "./lib/config";
+export { McpOAuthClient } from "./lib/mcp-oauth-client";

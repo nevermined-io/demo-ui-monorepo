@@ -17,8 +17,9 @@ export function buildNeverminedCheckoutUrl(
   agentId: string,
   options: { returnApiKey?: boolean; returnUrl?: string } = {}
 ): string {
-  const environment =
-    (globalThis as any)?.__RUNTIME_CONFIG__?.environment || "sandbox";
+  // Get environment from Vite env vars
+  const env = (import.meta as any).env;
+  const environment = (env.VITE_NVM_ENVIRONMENT as string) || "sandbox";
   const baseUrl =
     environment === "sandbox"
       ? "https://nevermined.app"

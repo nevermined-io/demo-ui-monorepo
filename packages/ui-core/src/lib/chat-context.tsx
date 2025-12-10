@@ -31,7 +31,17 @@ import { useAppConfig } from "./config";
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 export function ChatProvider({ children }: { children: ReactNode }) {
-  const { apiKey, credits, refreshCredits, initialized } = useUserState();
+  const {
+    apiKey,
+    credits,
+    refreshCredits,
+    initialized,
+    mcpOAuthClient,
+    mcpAccessToken,
+    isMcpAuthenticated,
+    startMcpAuth,
+    prepareAuthUrl,
+  } = useUserState();
   const appConfig = useAppConfig();
   const [messages, setMessages] = useState<FullMessage[]>([]);
 
@@ -371,13 +381,29 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     }));
 
     // Call the LLM router before sending to the agent
-    let llmAction: "forward" | "no_credit" | "order_plan" | "no_action" =
-      "forward";
+    let llmAction:
+      | "forward"
+      | "no_credit"
+      | "order_plan"
+      | "no_action"
+      | "authorize" = "forward";
     let llmReason = "";
     try {
+      // Determine which authentication token to use based on transport
+      const { transport } = appConfig;
+      const authToken =
+        transport === "mcp" ? mcpAccessToken || "" : apiKey || "";
+
+      console.log("[ChatProvider] Calling LLM router with:", {
+        transport,
+        hasToken: !!authToken,
+        tokenPreview: authToken ? `${authToken.slice(0, 10)}...` : "none",
+      });
+
       const { action, message, reason } = await llmRouterRequest(
         content,
-        llmHistory
+        llmHistory,
+        authToken
       );
       llmAction = action;
       llmReason = message || reason || "";
@@ -388,82 +414,91 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         "We're having trouble processing your request. Please try again.";
     }
 
-    // Checkout redirects for explicit router outcomes
-    if (llmAction === "no_credit" || llmAction === "order_plan") {
-      try {
-        const { agentId } = appConfig;
-        const hasApiKey = Boolean(apiKey);
-        const checkoutUrl = buildNeverminedCheckoutUrl(agentId, {
-          returnApiKey: !hasApiKey,
-        });
+    // Handle authorize action for MCP OAuth
+    if (llmAction === "authorize") {
+      const { transport } = appConfig;
 
-        // Persist pending intent to resume after returning
-        localStorage.setItem(
-          "pendingChatAction",
-          JSON.stringify({ type: "sendMessage", content })
-        );
-        // Mark that we're going to checkout (for detection on return)
-        localStorage.setItem("checkoutPending", "true");
+      if (transport === "mcp") {
+        try {
+          console.log("🔐 MCP OAuth authorization required");
 
-        // Show a message with a clickable checkout link instead of redirecting
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: prev.length + 1,
-            content: `${
-              llmReason && llmReason.trim()
-                ? llmReason.trim()
-                : llmAction === "no_credit"
-                  ? "You have no credits."
-                  : "Purchase is required to continue."
-            } Please complete the agent checkout: ${checkoutUrl}`,
-            type: "notice",
-            isUser: false,
-            conversationId: currentConversationId?.toString() || "new",
-            timestamp: new Date(),
-          },
-        ]);
-        return;
-      } catch {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: prev.length + 1,
-            content: "Unable to redirect to checkout. Please try again.",
-            type: "error",
-            isUser: false,
-            conversationId: currentConversationId?.toString() || "new",
-            timestamp: new Date(),
-          },
-        ]);
-        return;
+          // Persist pending action
+          localStorage.setItem(
+            "pendingChatAction",
+            JSON.stringify({ type: "sendMessage", content })
+          );
+
+          // Prepare authorization URL
+          const authUrl = await prepareAuthUrl();
+
+          // Message with Connect button
+          const message =
+            llmReason ||
+            "You need to authorize this application to access the Weather Agent.";
+
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: prev.length + 1,
+              content: message,
+              type: "authorize" as any,
+              metadata: { authUrl },
+              isUser: false,
+              conversationId: currentConversationId?.toString() || "new",
+              timestamp: new Date(),
+            },
+          ]);
+          return;
+        } catch (error) {
+          console.error("[ChatProvider] Failed to prepare auth URL:", error);
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: prev.length + 1,
+              content: "Failed to prepare authorization. Please try again.",
+              type: "error",
+              isUser: false,
+              conversationId: currentConversationId?.toString() || "new",
+              timestamp: new Date(),
+            },
+          ]);
+          return;
+        }
       }
     }
 
-    // If router says forward but we have no API key or credits are zero, go to checkout
-    if (llmAction === "forward") {
-      const needsApiKey = !apiKey;
-      const insufficientCredits = credits !== null && credits <= 0;
+    // Checkout redirects for explicit router outcomes
+    if (llmAction === "no_credit" || llmAction === "order_plan") {
+      const { transport } = appConfig;
 
-      // Skip credit checks if we're processing a pending action (user just returned from checkout)
-      if (
-        !processingPendingActionRef.current &&
-        (needsApiKey || insufficientCredits)
-      ) {
+      if (transport === "http") {
+        // HTTP Agent: Use Nevermined checkout
         try {
           const { agentId } = appConfig;
+          const hasApiKey = Boolean(apiKey);
           const checkoutUrl = buildNeverminedCheckoutUrl(agentId, {
-            returnApiKey: needsApiKey,
+            returnApiKey: !hasApiKey,
           });
-          console.log("🔑 needsApiKey:", needsApiKey);
-          console.log("💰 insufficientCredits:", insufficientCredits);
-          console.log("🔗 checkoutUrl:", checkoutUrl);
+
+          // Persist pending intent to resume after returning
+          localStorage.setItem(
+            "pendingChatAction",
+            JSON.stringify({ type: "sendMessage", content })
+          );
+          // Mark that we're going to checkout (for detection on return)
+          localStorage.setItem("checkoutPending", "true");
+
+          // Show a message with a clickable checkout link instead of redirecting
           setMessages((prev) => [
             ...prev,
             {
               id: prev.length + 1,
               content: `${
-                needsApiKey ? "No API Key found." : "Insufficient credits."
+                llmReason && llmReason.trim()
+                  ? llmReason.trim()
+                  : llmAction === "no_credit"
+                    ? "You have no credits."
+                    : "Purchase is required to continue."
               } Please complete the agent checkout: ${checkoutUrl}`,
               type: "notice",
               isUser: false,
@@ -471,12 +506,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
               timestamp: new Date(),
             },
           ]);
-          localStorage.setItem(
-            "pendingChatAction",
-            JSON.stringify({ type: "sendMessage", content })
-          );
-          // Mark that we're going to checkout (for detection on return)
-          localStorage.setItem("checkoutPending", "true");
           return;
         } catch {
           setMessages((prev) => [
@@ -491,6 +520,178 @@ export function ChatProvider({ children }: { children: ReactNode }) {
             },
           ]);
           return;
+        }
+      } else if (transport === "mcp") {
+        // MCP Agent: Use OAuth flow with Connect button
+        if (!isMcpAuthenticated || !mcpAccessToken) {
+          try {
+            console.log(
+              "🔐 MCP OAuth authorization required (no_credit/order_plan)"
+            );
+
+            // Persist pending action
+            localStorage.setItem(
+              "pendingChatAction",
+              JSON.stringify({ type: "sendMessage", content })
+            );
+
+            // Prepare authorization URL
+            const authUrl = await prepareAuthUrl();
+
+            const message =
+              llmReason ||
+              "You need to authorize this application to access the Weather Agent.";
+
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: prev.length + 1,
+                content: message,
+                type: "authorize" as any,
+                metadata: { authUrl },
+                isUser: false,
+                conversationId: currentConversationId?.toString() || "new",
+                timestamp: new Date(),
+              },
+            ]);
+            return;
+          } catch (error) {
+            console.error(
+              "[ChatProvider] Failed to prepare auth URL (no_credit):",
+              error
+            );
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: prev.length + 1,
+                content: "Failed to prepare authorization. Please try again.",
+                type: "error",
+                isUser: false,
+                conversationId: currentConversationId?.toString() || "new",
+                timestamp: new Date(),
+              },
+            ]);
+            return;
+          }
+        } else {
+          // Already authenticated with OAuth, the issue is server-side credits
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: prev.length + 1,
+              content:
+                llmReason ||
+                "You don't have enough credits. Please contact support or add credits to your account.",
+              type: "notice",
+              isUser: false,
+              conversationId: currentConversationId?.toString() || "new",
+              timestamp: new Date(),
+            },
+          ]);
+          return;
+        }
+      }
+    }
+
+    // If router says forward but we have no API key or credits are zero, go to checkout
+    if (llmAction === "forward") {
+      const { transport } = appConfig;
+
+      if (transport === "http") {
+        // HTTP Agent: Use Nevermined flow
+        const needsApiKey = !apiKey;
+        const insufficientCredits = credits !== null && credits <= 0;
+
+        // Skip credit checks if we're processing a pending action (user just returned from checkout)
+        if (
+          !processingPendingActionRef.current &&
+          (needsApiKey || insufficientCredits)
+        ) {
+          try {
+            const { agentId } = appConfig;
+            const checkoutUrl = buildNeverminedCheckoutUrl(agentId, {
+              returnApiKey: needsApiKey,
+            });
+            console.log("🔑 needsApiKey:", needsApiKey);
+            console.log("💰 insufficientCredits:", insufficientCredits);
+            console.log("🔗 checkoutUrl:", checkoutUrl);
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: prev.length + 1,
+                content: `${
+                  needsApiKey ? "No API Key found." : "Insufficient credits."
+                } Please complete the agent checkout: ${checkoutUrl}`,
+                type: "notice",
+                isUser: false,
+                conversationId: currentConversationId?.toString() || "new",
+                timestamp: new Date(),
+              },
+            ]);
+            localStorage.setItem(
+              "pendingChatAction",
+              JSON.stringify({ type: "sendMessage", content })
+            );
+            // Mark that we're going to checkout (for detection on return)
+            localStorage.setItem("checkoutPending", "true");
+            return;
+          } catch {
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: prev.length + 1,
+                content: "Unable to redirect to checkout. Please try again.",
+                type: "error",
+                isUser: false,
+                conversationId: currentConversationId?.toString() || "new",
+                timestamp: new Date(),
+              },
+            ]);
+            return;
+          }
+        }
+      } else if (transport === "mcp") {
+        // MCP Agent: Use OAuth flow
+        if (!isMcpAuthenticated || !mcpAccessToken) {
+          // Not authenticated with OAuth, initiate authorization flow
+          try {
+            console.log("🔐 MCP OAuth authorization required");
+
+            // Persist pending action
+            localStorage.setItem(
+              "pendingChatAction",
+              JSON.stringify({ type: "sendMessage", content })
+            );
+
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: prev.length + 1,
+                content: "Redirecting to authorization server...",
+                type: "notice",
+                isUser: false,
+                conversationId: currentConversationId?.toString() || "new",
+                timestamp: new Date(),
+              },
+            ]);
+
+            await startMcpAuth();
+            return;
+          } catch (error) {
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: prev.length + 1,
+                content:
+                  "Failed to start OAuth authorization. Please try again.",
+                type: "error",
+                isUser: false,
+                conversationId: currentConversationId?.toString() || "new",
+                timestamp: new Date(),
+              },
+            ]);
+            return;
+          }
         }
       }
     }
@@ -538,9 +739,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     const { transport } = appConfig;
     let toolsCatalog: any | undefined = undefined;
 
-    if (transport === "mcp") {
+    if (transport === "mcp" && mcpAccessToken) {
       try {
-        toolsCatalog = await listMcpToolsClient();
+        toolsCatalog = await listMcpToolsClient(mcpAccessToken);
       } catch (e) {
         console.warn("[ChatProvider] Failed to list MCP tools:", e);
       }
@@ -613,12 +814,18 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         | { response: string; txHash?: string; credits?: number };
 
       if (mcpToolCall && mcpToolCall.tool) {
+        // MCP tool call requires OAuth access token
+        if (!mcpAccessToken) {
+          throw new Error("MCP access token required for tool call");
+        }
         agentResponse = await callMcpToolClient(
           mcpToolCall.tool,
-          mcpToolCall.args || {}
+          mcpToolCall.args || {},
+          mcpAccessToken
         );
       } else {
-        agentResponse = await sendMessageToAgent(agentPrompt);
+        // Send message to agent (HTTP or MCP)
+        agentResponse = await sendMessageToAgent(agentPrompt, mcpAccessToken);
       }
 
       // Remove thinking message and add the agent's response
@@ -822,6 +1029,63 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     refreshCredits,
     sendMessage,
     currentConversationId,
+  ]);
+
+  // Process pending action when MCP OAuth is completed
+  useEffect(() => {
+    const { transport } = appConfig;
+
+    // Only for MCP transport
+    if (transport !== "mcp") {
+      return;
+    }
+
+    // Only process if we're authenticated and not already processing
+    if (
+      !isMcpAuthenticated ||
+      !mcpAccessToken ||
+      processingPendingActionRef.current
+    ) {
+      return;
+    }
+
+    const pendingAction = localStorage.getItem("pendingChatAction");
+    if (!pendingAction) {
+      return;
+    }
+
+    console.log(
+      "🔐 MCP OAuth completed, processing pending action:",
+      pendingAction
+    );
+
+    try {
+      const action = JSON.parse(pendingAction);
+      if (action.type === "sendMessage" && typeof action.content === "string") {
+        processingPendingActionRef.current = true;
+        localStorage.removeItem("pendingChatAction");
+
+        // Execute the pending message
+        console.log("📤 Sending pending message:", action.content);
+        sendMessage(action.content);
+
+        setTimeout(() => {
+          processingPendingActionRef.current = false;
+        }, 1000);
+      }
+    } catch (error) {
+      console.error(
+        "[ChatProvider] Error processing pending action after OAuth:",
+        error
+      );
+      localStorage.removeItem("pendingChatAction");
+    }
+  }, [
+    isMcpAuthenticated,
+    mcpAccessToken,
+    sendMessage,
+    currentConversationId,
+    appConfig,
   ]);
 
   const loadStoredMessages = (conversationId: number) => {

@@ -71,24 +71,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const authHeader = req.headers.authorization;
       let credits = 0;
+      let isAuthenticated = false;
+
       if (authHeader && authHeader.startsWith("Bearer ")) {
-        const nvmApiKey = authHeader.replace("Bearer ", "").trim();
-        if (nvmApiKey) {
+        const token = authHeader.replace("Bearer ", "").trim();
+        if (token) {
+          // User has a token (either API key for HTTP or access token for MCP)
+          isAuthenticated = true;
+
+          // Try to get credits (only applicable for HTTP mode with planId)
           try {
             const planId = req.headers["x-plan-id"] as string;
-            if (planId) credits = await getUserCredits(nvmApiKey, planId);
+            if (planId) {
+              credits = await getUserCredits(token, planId);
+            }
           } catch {
             credits = 0;
           }
         }
       }
+
       const prompt = loadLLMRouterPrompt(req);
-      const result = await llmRouter(message, history, credits, prompt);
+      const result = await llmRouter(
+        message,
+        history,
+        credits,
+        isAuthenticated,
+        prompt
+      );
       return res.json(result);
     } catch {
       return res
         .status(500)
         .json({ error: "Failed to call LLM or get credits" });
+    }
+  });
+
+  // Development endpoint to reload LLM router prompt (clears cache)
+  app.post("/api/dev/reload-prompt", async (req, res) => {
+    try {
+      const { reloadLLMRouterPrompt } = await import(
+        "./services/promptService.js"
+      );
+      const prompt = reloadLLMRouterPrompt(req);
+      return res.json({
+        success: true,
+        message: "LLM router prompt reloaded from disk",
+        promptLength: prompt.length,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        error: "Failed to reload prompt",
+        details: error instanceof Error ? error.message : String(error),
+      });
     }
   });
 
@@ -158,16 +193,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .status(401)
         .json({ error: "Missing or invalid Authorization header" });
     }
-    const nvmApiKey = authHeader.replace("Bearer ", "").trim();
-    if (!nvmApiKey) {
-      return res.status(401).json({ error: "Missing API Key" });
+    const authToken = authHeader.replace("Bearer ", "").trim();
+    if (!authToken) {
+      return res.status(401).json({ error: "Missing authentication token" });
     }
     try {
-      const planId = req.headers["x-plan-id"] as string;
-      if (!planId) {
-        return res.status(500).json({ error: "Missing plan DID" });
-      }
-
       // Get agent mode from header only (no fallback inference)
       const headerMode = String(
         (req.headers["x-agent-mode"] as string) || ""
@@ -186,15 +216,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const agentConfig = loadAgentConfig(mode);
 
       try {
-        const agentResponse = await createTask(
-          inputQuery as any,
-          nvmApiKey,
-          planId,
-          mode,
-          agentConfig.endpoint,
-          agentConfig.id,
-          agentConfig.environment
-        );
+        let agentResponse;
+
+        if (mode === "http") {
+          // HTTP mode: requires planId and uses Nevermined
+          const planId = req.headers["x-plan-id"] as string;
+          if (!planId) {
+            return res
+              .status(500)
+              .json({ error: "Missing plan DID for HTTP agent" });
+          }
+
+          agentResponse = await createTask(
+            inputQuery as any,
+            authToken, // nvmApiKey for HTTP
+            mode,
+            agentConfig.endpoint,
+            agentConfig.id,
+            agentConfig.environment,
+            planId
+          );
+        } else {
+          // MCP mode: uses OAuth access token directly
+          agentResponse = await createTask(
+            inputQuery as any,
+            authToken, // OAuth access token for MCP
+            mode,
+            agentConfig.endpoint
+          );
+        }
+
         return res.status(200).json(agentResponse);
       } catch (error) {
         console.error("Error creating task:", error);
@@ -213,26 +264,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .status(401)
         .json({ error: "Missing or invalid Authorization header" });
     }
-    const nvmApiKey = authHeader.replace("Bearer ", "").trim();
-    if (!nvmApiKey) {
-      return res.status(401).json({ error: "Missing API Key" });
+    const accessToken = authHeader.replace("Bearer ", "").trim();
+    if (!accessToken) {
+      return res.status(401).json({ error: "Missing access token" });
     }
     try {
-      const planId = req.headers["x-plan-id"] as string;
-      if (!planId) {
-        return res.status(500).json({ error: "Missing plan DID" });
-      }
-
       // Load MCP agent configuration
       const agentConfig = loadAgentConfig("mcp");
 
-      const tools = await listMcpTools(
-        nvmApiKey,
-        planId,
-        agentConfig.id,
-        agentConfig.environment,
-        agentConfig.endpoint
-      );
+      // Use OAuth access token directly (no need for Nevermined SDK)
+      const tools = await listMcpTools(accessToken, agentConfig.endpoint);
       res.json(tools);
     } catch (err) {
       console.error("Error listing MCP tools:", err);
@@ -254,40 +295,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .status(401)
         .json({ error: "Missing or invalid Authorization header" });
     }
-    const nvmApiKey = authHeader.replace("Bearer ", "").trim();
-    if (!nvmApiKey) {
-      return res.status(401).json({ error: "Missing API Key" });
+    const accessToken = authHeader.replace("Bearer ", "").trim();
+    if (!accessToken) {
+      return res.status(401).json({ error: "Missing access token" });
     }
     try {
-      const planId = req.headers["x-plan-id"] as string;
-      if (!planId) {
-        return res.status(500).json({ error: "Missing plan DID" });
-      }
-
       // Load MCP agent configuration
       const agentConfig = loadAgentConfig("mcp");
 
-      const prevEnv = {
-        NVM_ENVIRONMENT: process.env.NVM_ENVIRONMENT,
-      } as Record<string, string | undefined>;
-
-      try {
-        // Set environment for the MCP service
-        process.env.NVM_ENVIRONMENT = agentConfig.environment;
-
-        const result = await callMcpTool(
-          tool,
-          args || {},
-          nvmApiKey,
-          planId,
-          agentConfig.id,
-          agentConfig.environment,
-          agentConfig.endpoint
-        );
-        res.json(result);
-      } finally {
-        process.env.NVM_ENVIRONMENT = prevEnv.NVM_ENVIRONMENT;
-      }
+      // Use OAuth access token directly (no need for Nevermined SDK)
+      const result = await callMcpTool(
+        tool,
+        args || {},
+        accessToken,
+        agentConfig.endpoint
+      );
+      res.json(result);
     } catch (err) {
       console.error("Error calling MCP tool:", err);
       res.status(500).json({ error: "Failed to call MCP tool" });

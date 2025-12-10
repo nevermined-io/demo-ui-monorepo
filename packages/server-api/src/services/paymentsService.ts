@@ -60,24 +60,15 @@ export async function createTaskHttp(
  * Calls the agent using MCP with either a plain text query mapped to a tool call
  * or an explicit tool call. Only valid for the MCP Agent app context.
  * @param input Plain string (mapped to default tool) or explicit { tool, args }.
- * @param nvmApiKey Nevermined API key.
- * @param planId Plan DID.
+ * @param accessToken OAuth access token (no longer uses Nevermined SDK)
+ * @param httpEndpoint MCP server endpoint
  * @returns Agent response simplified to { output }.
  */
 export async function createTaskMcp(
   input: string | { tool: string; args: Record<string, any> },
-  nvmApiKey: string,
-  planId: string,
-  httpEndpoint: string,
-  agentId: string,
-  environment: string
+  accessToken: string,
+  httpEndpoint: string
 ): Promise<{ output: string } & Record<string, any>> {
-  const { accessToken } = await getAgentAccessToken(
-    nvmApiKey,
-    planId,
-    agentId,
-    environment
-  );
   const transport = new StreamableHTTPClientTransport(new URL(httpEndpoint), {
     requestInit: { headers: { Authorization: `Bearer ${accessToken}` } },
   });
@@ -192,18 +183,21 @@ export async function getAgentAccessToken(
 /**
  * Calls the agent using the selected transport strictly without fallbacks.
  * @param input String (HTTP: synthesized intent) or tool call (MCP).
- * @param nvmApiKey Nevermined API key.
- * @param planId Plan DID.
+ * @param authToken Authentication token (nvmApiKey for HTTP, OAuth access token for MCP)
  * @param mode Transport mode: "http" for Simple Agent, "mcp" for MCP Agent.
+ * @param httpEndpoint Agent endpoint
+ * @param agentId Agent DID (only for HTTP)
+ * @param environment Environment (only for HTTP)
+ * @param planId Plan DID (only for HTTP)
  */
 export async function createTask(
   input: string | { tool: string; args: Record<string, any> },
-  nvmApiKey: string,
-  planId: string,
+  authToken: string,
   mode: "http" | "mcp",
   httpEndpoint: string,
-  agentId: string,
-  environment: string
+  agentId?: string,
+  environment?: string,
+  planId?: string
 ): Promise<any> {
   if (mode === "http") {
     if (typeof input !== "string") {
@@ -211,42 +205,36 @@ export async function createTask(
         "HTTP agent expects a string input_query. Provide synthesized intent as string."
       );
     }
+    if (!agentId || !environment || !planId) {
+      throw new Error("HTTP agent requires agentId, environment, and planId");
+    }
     return await createTaskHttp(
       input,
-      nvmApiKey,
+      authToken, // nvmApiKey for HTTP
       planId,
       httpEndpoint,
       agentId,
       environment
     );
   }
+  // MCP mode: use OAuth access token directly
   return await createTaskMcp(
     input,
-    nvmApiKey,
-    planId,
-    httpEndpoint,
-    agentId,
-    environment
+    authToken, // OAuth access token for MCP
+    httpEndpoint
   );
 }
 
-/** Lists available MCP tools. */
+/**
+ * Lists available MCP tools using OAuth access token.
+ * @param accessToken OAuth access token (no longer uses Nevermined SDK)
+ * @param mcpEndpoint MCP server endpoint
+ */
 export async function listMcpTools(
-  nvmApiKey: string,
-  planId: string,
-  agentId: string,
-  environment: string,
-  mcpEndpoint?: string
+  accessToken: string,
+  mcpEndpoint: string
 ): Promise<any> {
-  const endpoint =
-    mcpEndpoint || process.env.MCP_ENDPOINT || "http://localhost:3001/mcp";
-  const { accessToken } = await getAgentAccessToken(
-    nvmApiKey,
-    planId,
-    agentId,
-    environment
-  );
-  const transport = new StreamableHTTPClientTransport(new URL(endpoint), {
+  const transport = new StreamableHTTPClientTransport(new URL(mcpEndpoint), {
     requestInit: { headers: { Authorization: `Bearer ${accessToken}` } },
   });
   const client = new McpClient({
@@ -267,25 +255,20 @@ export async function listMcpTools(
   }
 }
 
-/** Calls a specific MCP tool with arbitrary arguments. */
+/**
+ * Calls a specific MCP tool using OAuth access token.
+ * @param toolName Name of the MCP tool to call
+ * @param args Arguments for the tool
+ * @param accessToken OAuth access token (no longer uses Nevermined SDK)
+ * @param mcpEndpoint MCP server endpoint
+ */
 export async function callMcpTool(
   toolName: string,
   args: Record<string, any>,
-  nvmApiKey: string,
-  planId: string,
-  agentId: string,
-  environment: string,
-  mcpEndpoint?: string
+  accessToken: string,
+  mcpEndpoint: string
 ): Promise<{ output: string; content?: any }> {
-  const endpoint =
-    mcpEndpoint || process.env.MCP_ENDPOINT || "http://localhost:3001/mcp";
-  const { accessToken } = await getAgentAccessToken(
-    nvmApiKey,
-    planId,
-    agentId,
-    environment
-  );
-  const transport = new StreamableHTTPClientTransport(new URL(endpoint), {
+  const transport = new StreamableHTTPClientTransport(new URL(mcpEndpoint), {
     requestInit: { headers: { Authorization: `Bearer ${accessToken}` } },
   });
   const client = new McpClient({
