@@ -22,6 +22,25 @@ import {
   loadLLMRouterPrompt,
 } from "./services/promptService.js";
 import { loadAgentConfig } from "@app/config";
+import { decodeAccessToken } from "@nevermined-io/payments";
+
+/**
+ * Helper function to extract planId from MCP OAuth access token.
+ * @param accessToken - The MCP OAuth access token
+ * @returns The planId extracted from the token, or null if not found
+ */
+function extractPlanIdFromMcpToken(accessToken: string): string | null {
+  try {
+    const paymentRequired = decodeAccessToken(accessToken);
+    if (paymentRequired?.accepted?.planId) {
+      return paymentRequired.accepted.planId;
+    }
+    return null;
+  } catch (error) {
+    console.warn("[extractPlanIdFromMcpToken] Failed to decode token:", error);
+    return null;
+  }
+}
 
 /**
  * Registers all API routes on a provided Express app and returns an http.Server.
@@ -51,11 +70,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .status(401)
           .json({ error: "Missing or invalid Authorization header" });
       }
-      const nvmApiKey = authHeader.replace("Bearer ", "").trim();
-      if (!nvmApiKey) return res.status(401).json({ error: "Missing API Key" });
-      const planId = req.headers["x-plan-id"] as string;
+      const authToken = authHeader.replace("Bearer ", "").trim();
+      if (!authToken)
+        return res.status(401).json({ error: "Missing authentication token" });
+
+      // Get agent mode from header
+      const headerMode = String(
+        (req.headers["x-agent-mode"] as string) || ""
+      ).toLowerCase();
+
+      let planId = req.headers["x-plan-id"] as string;
+
+      // For MCP mode, always decode the token to extract planId
+      // (frontend doesn't send X-Plan-Id for MCP transport)
+      if (headerMode === "mcp") {
+        const decodedPlanId = extractPlanIdFromMcpToken(authToken);
+        if (decodedPlanId) {
+          planId = decodedPlanId;
+          console.log("[api/credit] Extracted Plan ID from MCP token:", planId);
+        }
+      }
+
       if (!planId) return res.status(500).json({ error: "Missing plan DID" });
-      const credit = await getUserCredits(nvmApiKey, planId);
+
+      // For HTTP mode, authToken is nvmApiKey; for MCP mode, it's the OAuth access token
+      const credit = await getUserCredits(authToken, planId);
       res.json({ credit });
     } catch (err) {
       console.error("Error fetching credit:", err);
@@ -79,9 +118,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // User has a token (either API key for HTTP or access token for MCP)
           isAuthenticated = true;
 
-          // Try to get credits (only applicable for HTTP mode with planId)
+          // Try to get credits (for HTTP mode with planId, or MCP mode by decoding token)
           try {
-            const planId = req.headers["x-plan-id"] as string;
+            const headerMode = String(
+              (req.headers["x-agent-mode"] as string) || ""
+            ).toLowerCase();
+            let planId = req.headers["x-plan-id"] as string;
+
+            // For MCP mode, decode the token to extract planId
+            if (headerMode === "mcp" && !planId) {
+              planId = extractPlanIdFromMcpToken(token) || "";
+            }
+
             if (planId) {
               credits = await getUserCredits(token, planId);
             }

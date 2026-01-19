@@ -73,21 +73,26 @@ export function UserStateProvider({ children }: { children: React.ReactNode }) {
 
       // Determine which credential to use based on transport
       let authToken = "";
+      let planIdHeader = "";
+      
       if (transport === "http") {
         if (!apiKey) {
           setCredits(null);
           return null;
         }
         authToken = apiKey;
+        planIdHeader = getStoredPlanId();
       } else if (transport === "mcp") {
         if (!mcpAccessToken) {
           setCredits(null);
           return null;
         }
         authToken = mcpAccessToken;
+        // For MCP, the backend will decode the token to extract planId
+        // No need to send X-Plan-Id header
+        planIdHeader = "";
       }
 
-      const planIdHeader = transport === "http" ? getStoredPlanId() : "";
       const resp = await fetch("/api/credit", {
         headers: {
           Authorization: `Bearer ${authToken}`,
