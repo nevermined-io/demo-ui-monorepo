@@ -160,7 +160,7 @@ export async function getUserCredits(
   return credit;
 }
 
-/** Gets the agent access token for direct calls. */
+/** Gets the agent access token for direct calls using x402. */
 export async function getAgentAccessToken(
   nvmApiKey: string,
   planId: string,
@@ -173,11 +173,8 @@ export async function getAgentAccessToken(
     );
   }
   const payments = initializePayments(nvmApiKey, environment);
-  const agentAccessParams = await payments.agents.getAgentAccessToken(
-    planId,
-    agentId
-  );
-  return { accessToken: agentAccessParams.accessToken, agentId };
+  const result = await payments.x402.getX402AccessToken(planId, agentId);
+  return { accessToken: result.accessToken, agentId };
 }
 
 /**
