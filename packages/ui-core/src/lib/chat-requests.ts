@@ -10,22 +10,25 @@ import { getWithTTL } from "./storage-utils";
  * Calls the LLM router endpoint to determine the next action.
  * @param {string} content - The user message.
  * @param {any[]} history - The chat history.
- * @returns {Promise<{action: "forward" | "no_credit" | "order_plan" | "no_action", message?: string, reason?: string}>}
+ * @param {string} [authToken] - Optional authentication token (API Key for HTTP, Access Token for MCP).
+ * @returns {Promise<{action: "forward" | "no_credit" | "order_plan" | "no_action" | "authorize", message?: string, reason?: string}>}
  */
 export async function llmRouterRequest(
   content: string,
-  history: any[]
+  history: any[],
+  authToken?: string
 ): Promise<{
-  action: "forward" | "no_credit" | "order_plan" | "no_action";
+  action: "forward" | "no_credit" | "order_plan" | "no_action" | "authorize";
   message?: string;
   reason?: string;
 }> {
-  const apiKey = getWithTTL("nvmApiKey");
+  // Use provided authToken, or fallback to stored API key (for backward compatibility)
+  const token = authToken || getWithTTL("nvmApiKey");
   const resp = await fetch("/api/llm-router", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...getPlanIdHeader(),
     },
     body: JSON.stringify({

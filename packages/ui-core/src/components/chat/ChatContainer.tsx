@@ -50,15 +50,19 @@ export default function ChatContainer() {
     initialized,
     setApiKey,
     setCredits,
+    mcpAccessToken,
+    isMcpAuthenticated,
   } = useUserState();
   const loading = credits === null;
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
-  const hasApiKey = !!apiKey;
 
   // Prepare help modal copy based on transport (http vs mcp)
   const { transport } = useAppConfig();
   const isMcp = transport === "mcp";
+
+  // Check if user is authenticated (API Key for HTTP, OAuth token for MCP)
+  const hasApiKey = isMcp ? isMcpAuthenticated : !!apiKey;
   const appTitle = isMcp ? "Weather Agent" : "Financial Advisor AI";
   const helpTitle = isMcp
     ? "About the Weather Agent"
@@ -112,25 +116,36 @@ export default function ChatContainer() {
   );
 
   /**
-   * Logs out the user by clearing all localStorage data and resetting app state.
-   * - Removes all persisted keys (API key, theme, chat data, pending actions, etc.)
+   * Logs out the user by clearing all stored data and resetting app state.
+   * - Removes all persisted keys (API key, OAuth tokens, chat data, pending actions, etc.)
+   * - Clears sessionStorage (OAuth state, code verifier)
    * - Resets in-memory user state and chat state
-   * - Opens the settings modal to prompt reconfiguration
+   * - Reloads the page to reset authentication
    * @returns {void}
    */
   const handleLogout = (): void => {
     try {
+      // Clear all localStorage (includes API keys, tokens, conversations, messages)
       localStorage.clear();
     } catch {}
     try {
+      // Clear sessionStorage (includes OAuth state, code verifier)
+      sessionStorage.clear();
+    } catch {}
+    try {
+      // Clear state
       setApiKey("");
       setCredits(null);
     } catch {}
     try {
+      // Clear chat history
       clearHistory();
     } catch {}
-    setSettingsOpen(false);
-    refreshCredits();
+
+    console.log("[ChatContainer] User logged out");
+
+    // Reload page to reset authentication state
+    window.location.reload();
   };
 
   if (!initialized) return null;

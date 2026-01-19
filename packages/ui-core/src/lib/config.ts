@@ -1,6 +1,6 @@
 /**
- * Dynamic configuration system for runtime environment variables
- * This allows changing configuration without rebuilding the application
+ * Configuration system using environment variables
+ * This matches the backend's approach using DEFAULT_AGENTS + env vars
  */
 
 export interface AppConfig {
@@ -8,65 +8,55 @@ export interface AppConfig {
   agentId: string;
   agentEndpoint: string;
   environment: string;
+  mcpClientId?: string;
 }
 
-/**
- * Loads the runtime configuration from the server
- * This function dynamically loads /config.js and executes it
- */
-export async function loadRuntimeConfig(): Promise<void> {
-  try {
-    // Create a script element to load the config
-    const script = document.createElement("script");
-    script.src = "/config.js";
-    script.async = true;
-
-    // Return a promise that resolves when the script loads
-    return new Promise((resolve, reject) => {
-      script.onload = () => {
-        resolve();
-      };
-      script.onerror = () => {
-        console.warn(
-          "[AppConfig] Failed to load runtime configuration from /config.js"
-        );
-        reject(new Error("Failed to load runtime configuration"));
-      };
-
-      // Append the script to the document head
-      document.head.appendChild(script);
-    });
-  } catch (error) {
-    console.error("[AppConfig] Error loading runtime configuration:", error);
-    throw error;
-  }
-}
+// Default agent configurations (matches backend DEFAULT_AGENTS)
+const DEFAULT_AGENTS = {
+  http: {
+    id: "did:nv:f82254a93e8486e102031b6567c2d734f21a71ca793358b1a07d03eb409a546a",
+    endpoint: "http://localhost:3001/ask",
+    environment: "staging_sandbox",
+  },
+  mcp: {
+    id: "did:nv:3fe43029c257aad4694ad037e4ceae5360d7f2061c7982117bf8da9c20614000",
+    endpoint: "http://localhost:4002",
+    environment: "staging_sandbox",
+  },
+};
 
 /**
  * Gets the current application configuration
- * First checks for runtime config, then falls back to build-time env vars
+ * Uses environment variables or defaults (same as backend)
  */
 export function getAppConfig(): AppConfig {
-  const runtimeConfig = (window as any).__RUNTIME_CONFIG__;
+  // Determine transport from path (same logic as before)
+  const currentPath = window.location.pathname;
+  const transport = currentPath.includes("mcp") ? "mcp" : "http";
 
-  if (runtimeConfig) {
+  const defaults = DEFAULT_AGENTS[transport];
+
+  // Get from environment variables (Vite exposes them as import.meta.env.VITE_*)
+  const env = (import.meta as any).env;
+
+  if (transport === "http") {
     return {
-      transport: runtimeConfig.transport || "http",
-      agentId: runtimeConfig.agentId || "",
-      agentEndpoint: runtimeConfig.agentEndpoint || "",
-      environment: runtimeConfig.environment || "",
+      transport: "http",
+      agentId: (env.VITE_HTTP_AGENT_ID as string) || defaults.id,
+      agentEndpoint:
+        (env.VITE_HTTP_AGENT_ENDPOINT as string) || defaults.endpoint,
+      environment: (env.VITE_NVM_ENVIRONMENT as string) || defaults.environment,
+    };
+  } else {
+    return {
+      transport: "mcp",
+      agentId: (env.VITE_MCP_AGENT_ID as string) || defaults.id,
+      agentEndpoint:
+        (env.VITE_MCP_AGENT_ENDPOINT as string) || defaults.endpoint,
+      environment: (env.VITE_NVM_ENVIRONMENT as string) || defaults.environment,
+      mcpClientId: env.VITE_MCP_CLIENT_ID as string | undefined,
     };
   }
-
-  const currentPath = window.location.pathname;
-  const transport = currentPath.startsWith("/mcp-agent") ? "mcp" : "http";
-
-  return {
-    transport,
-    agentId: "",
-    agentEndpoint: "",
-    environment: "",
-  };
 }
 
 /**

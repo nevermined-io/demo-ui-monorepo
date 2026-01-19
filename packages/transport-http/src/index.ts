@@ -32,11 +32,13 @@ export class HttpAgentClient implements AgentClient {
     const apiKey = localStorage.getItem("nvmApiKey") || "";
     const transport = "http"; // HTTP transport is hardcoded for this package
     const planId = getStoredPlanId();
-    const endpoint = (globalThis as any)?.__RUNTIME_CONFIG__?.endpoint || "";
+    // Get endpoint from environment variables (Vite)
+    const env = (import.meta as any).env;
+    const agentEndpoint = (env.VITE_HTTP_AGENT_ENDPOINT as string) || "";
     return {
       ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
       ...(planId ? { "X-Plan-Id": planId } : {}),
-      ...(endpoint ? { "X-Agent-Endpoint": endpoint } : {}),
+      ...(agentEndpoint ? { "X-Agent-Endpoint": agentEndpoint } : {}),
       "X-Agent-Mode": transport,
     } as HeadersInit;
   }
