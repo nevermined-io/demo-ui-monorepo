@@ -112,14 +112,31 @@ export async function createTaskMcp(
     }
     if (!outputText)
       outputText = typeof result === "string" ? result : JSON.stringify(result);
+
+    // Extract metadata if present
     const metadata =
       result && typeof result === "object"
         ? (result as any).metadata
         : undefined;
-    if (metadata && typeof metadata === "object") {
-      return { output: outputText, redemptionResult: metadata };
+
+    // Return full response with content, metadata, and all other properties
+    const response: any = {
+      output: outputText,
+      content: result?.content,
+      redemptionResult:
+        metadata && typeof metadata === "object" ? metadata : {},
+    };
+
+    // Include any other properties from the result (e.g., isError, error, etc.)
+    if (result && typeof result === "object") {
+      Object.keys(result).forEach((key) => {
+        if (!["content", "metadata"].includes(key)) {
+          response[key] = (result as any)[key];
+        }
+      });
     }
-    return { output: outputText, redemptionResult: {} };
+
+    return response;
   } catch (error) {
     console.error("Error calling MCP tool:", error);
     throw error;
@@ -264,7 +281,12 @@ export async function callMcpTool(
   args: Record<string, any>,
   accessToken: string,
   mcpEndpoint: string
-): Promise<{ output: string; content?: any }> {
+): Promise<{
+  output: string;
+  content?: any;
+  metadata?: any;
+  [key: string]: any;
+}> {
   const transport = new StreamableHTTPClientTransport(new URL(mcpEndpoint), {
     requestInit: { headers: { Authorization: `Bearer ${accessToken}` } },
   });
@@ -292,7 +314,30 @@ export async function callMcpTool(
     }
     if (!outputText)
       outputText = typeof result === "string" ? result : JSON.stringify(result);
-    return { output: outputText, content: result?.content };
+
+    // Extract metadata if present
+    const metadata =
+      result && typeof result === "object"
+        ? (result as any).metadata
+        : undefined;
+
+    // Return full response with content, metadata, and all other properties
+    const response: any = {
+      output: outputText,
+      content: result?.content,
+      metadata: metadata,
+    };
+
+    // Include any other properties from the result (e.g., isError, error, etc.)
+    if (result && typeof result === "object") {
+      Object.keys(result).forEach((key) => {
+        if (!["content", "metadata"].includes(key)) {
+          response[key] = (result as any)[key];
+        }
+      });
+    }
+
+    return response;
   } finally {
     try {
       await client.close();

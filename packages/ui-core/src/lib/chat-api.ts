@@ -48,6 +48,9 @@ export async function sendMessageToAgent(
   response: string;
   txHash?: string;
   credits?: number;
+  content?: any;
+  metadata?: any;
+  [key: string]: any;
 }> {
   const transport = getTransport();
 
@@ -65,7 +68,8 @@ export async function sendMessageToAgent(
       throw new Error("MCP access token required for MCP agent");
     }
     authToken = mcpAccessToken;
-    // No se necesita planId para MCP OAuth
+    // For MCP, the backend will decode the token to extract planId
+    // No need to send X-Plan-Id header
     planIdValue = "";
   }
 
@@ -81,10 +85,21 @@ export async function sendMessageToAgent(
   });
   if (!response.ok) throw new Error("Failed to send message to the agent");
   const data = await response.json();
+  
+  // Return all available data from the response
   return {
     response: data.output,
     txHash: data.redemptionResult?.txHash,
     credits: data.redemptionResult?.creditsRedeemed,
+    content: data.content,
+    metadata: data.metadata || data.redemptionResult,
+    // Include any other properties from the response
+    ...Object.keys(data).reduce((acc, key) => {
+      if (!["output", "redemptionResult"].includes(key)) {
+        acc[key] = data[key];
+      }
+      return acc;
+    }, {} as Record<string, any>),
   };
 }
 
@@ -181,7 +196,7 @@ export async function callMcpToolClient(
   tool: string,
   args: Record<string, any>,
   mcpAccessToken: string
-): Promise<{ response: string; content?: any }> {
+): Promise<{ response: string; content?: any; metadata?: any; [key: string]: any }> {
   const transport = getTransport();
   const resp = await fetch("/api/mcp/tool", {
     method: "POST",
@@ -194,5 +209,18 @@ export async function callMcpToolClient(
   });
   if (!resp.ok) throw new Error("Failed to call MCP tool");
   const data = await resp.json();
-  return { response: data.output, content: data.content };
+  
+  // Return all available data from the response
+  return {
+    response: data.output,
+    content: data.content,
+    metadata: data.metadata,
+    // Include any other properties from the response
+    ...Object.keys(data).reduce((acc, key) => {
+      if (!["output"].includes(key)) {
+        acc[key] = data[key];
+      }
+      return acc;
+    }, {} as Record<string, any>),
+  };
 }
