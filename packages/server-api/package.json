@@ -13,7 +13,7 @@
   "dependencies": {
     "express": "^4.21.2",
     "openai": "^4.103.0",
-    "@nevermined-io/payments": "^1.0.0-rc31",
+    "@nevermined-io/payments": "^1.0.0-rc32",
     "ethers": "^5.7.2",
     "@modelcontextprotocol/sdk": "^1.6.0"
   },
