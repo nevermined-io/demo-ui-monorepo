@@ -1,6 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { getTransport } from "./config";
+import { getTransport, getAppConfig } from "./config";
 import { getWithTTL, setWithTTL } from "./storage-utils";
 
 export function cn(...inputs: ClassValue[]) {
@@ -9,6 +9,7 @@ export function cn(...inputs: ClassValue[]) {
 
 /**
  * Builds a Nevermined Checkout URL for a given agent id.
+ * Uses the app configuration to determine the environment.
  * @param {string} agentId - The Nevermined agent identifier used by checkout.
  * @param {{ returnApiKey?: boolean, returnUrl?: string }} options - Checkout options.
  * @returns {string} The absolute checkout URL to redirect the user.
@@ -17,9 +18,8 @@ export function buildNeverminedCheckoutUrl(
   agentId: string,
   options: { returnApiKey?: boolean; returnUrl?: string } = {}
 ): string {
-  // Get environment from Vite env vars
-  const env = (import.meta as any).env;
-  const environment = (env.VITE_NVM_ENVIRONMENT as string) || "sandbox";
+  // Get environment from app config (which reads from VITE_NVM_ENVIRONMENT or defaults)
+  const { environment } = getAppConfig();
   const baseUrl =
     environment === "sandbox"
       ? "https://nevermined.app"

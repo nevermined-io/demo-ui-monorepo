@@ -27,36 +27,87 @@ const DEFAULT_AGENTS = {
 
 /**
  * Gets the current application configuration
- * Uses environment variables or defaults (same as backend)
+ * Uses runtime config from window.__RUNTIME_CONFIG__ (injected by server) or
+ * build-time Vite environment variables, with defaults as fallback
  */
 export function getAppConfig(): AppConfig {
-  // Determine transport from path (same logic as before)
-  const currentPath = window.location.pathname;
-  const transport = currentPath.includes("mcp") ? "mcp" : "http";
+  // Try to get from window globals first (injected by server at runtime)
+  const fromWindow = (globalThis as any)?.__RUNTIME_CONFIG__ || {};
 
-  const defaults = DEFAULT_AGENTS[transport];
+  // Determine transport from path or window config
+  const currentPath = window.location.pathname;
+  const transport: "http" | "mcp" =
+    (fromWindow.transport as "http" | "mcp") ||
+    (currentPath.includes("mcp") ? "mcp" : "http");
+
+  const defaults = DEFAULT_AGENTS[transport as keyof typeof DEFAULT_AGENTS];
 
   // Get from environment variables (Vite exposes them as import.meta.env.VITE_*)
   const env = (import.meta as any).env;
 
+  // Debug logging
+  console.group("🔧 [getAppConfig] Configuration Debug");
+  console.log("📦 window.__RUNTIME_CONFIG__:", fromWindow);
+  console.log("🔨 Vite env vars:", {
+    VITE_HTTP_AGENT_ID: env.VITE_HTTP_AGENT_ID,
+    VITE_HTTP_AGENT_ENDPOINT: env.VITE_HTTP_AGENT_ENDPOINT,
+    VITE_MCP_AGENT_ID: env.VITE_MCP_AGENT_ID,
+    VITE_MCP_AGENT_ENDPOINT: env.VITE_MCP_AGENT_ENDPOINT,
+    VITE_NVM_ENVIRONMENT: env.VITE_NVM_ENVIRONMENT,
+    VITE_MCP_CLIENT_ID: env.VITE_MCP_CLIENT_ID,
+  });
+  console.log("🎯 Transport:", transport);
+  console.log("📋 Defaults:", defaults);
+
+  let config: AppConfig;
+
   if (transport === "http") {
-    return {
+    config = {
       transport: "http",
-      agentId: (env.VITE_HTTP_AGENT_ID as string) || defaults.id,
+      agentId:
+        fromWindow.agentId ||
+        (env.VITE_HTTP_AGENT_ID as string) ||
+        defaults.id,
       agentEndpoint:
-        (env.VITE_HTTP_AGENT_ENDPOINT as string) || defaults.endpoint,
-      environment: (env.VITE_NVM_ENVIRONMENT as string) || defaults.environment,
+        fromWindow.agentEndpoint ||
+        (env.VITE_HTTP_AGENT_ENDPOINT as string) ||
+        defaults.endpoint,
+      environment:
+        fromWindow.environment ||
+        (env.VITE_NVM_ENVIRONMENT as string) ||
+        defaults.environment,
     };
   } else {
-    return {
+    config = {
       transport: "mcp",
-      agentId: (env.VITE_MCP_AGENT_ID as string) || defaults.id,
+      agentId:
+        fromWindow.agentId ||
+        (env.VITE_MCP_AGENT_ID as string) ||
+        defaults.id,
       agentEndpoint:
-        (env.VITE_MCP_AGENT_ENDPOINT as string) || defaults.endpoint,
-      environment: (env.VITE_NVM_ENVIRONMENT as string) || defaults.environment,
+        fromWindow.agentEndpoint ||
+        (env.VITE_MCP_AGENT_ENDPOINT as string) ||
+        defaults.endpoint,
+      environment:
+        fromWindow.environment ||
+        (env.VITE_NVM_ENVIRONMENT as string) ||
+        defaults.environment,
       mcpClientId: env.VITE_MCP_CLIENT_ID as string | undefined,
     };
   }
+
+  console.log("✅ Final config:", config);
+  console.log(
+    "📍 Environment source:",
+    fromWindow.environment
+      ? "window.__RUNTIME_CONFIG__ (runtime)"
+      : env.VITE_NVM_ENVIRONMENT
+        ? "VITE_NVM_ENVIRONMENT (build-time)"
+        : "defaults"
+  );
+  console.groupEnd();
+
+  return config;
 }
 
 /**

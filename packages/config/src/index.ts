@@ -49,37 +49,6 @@ export function getAgentByTransport(transport: "http" | "mcp"): AgentConfig {
   return loadAgentConfig(transport);
 }
 
-/**
- * Builds a Nevermined Checkout URL for a given agent id.
- * Uses environment to pick the base host.
- */
-export function buildNeverminedCheckoutUrl(
-  agentId: string,
-  options: { returnApiKey?: boolean; returnUrl?: string } = {}
-): string {
-  const { environment } = loadRuntimeConfig();
-  const baseUrl =
-    environment === "sandbox"
-      ? "https://nevermined.app"
-      : "https://nevermined.dev";
-  const base = `${baseUrl}/checkout/${encodeURIComponent(agentId)}`;
-  const params = new URLSearchParams();
-  if (options.returnApiKey) params.set("export", "nvm-api-key");
-  const returnUrl =
-    options.returnUrl ||
-    (() => {
-      try {
-        const { origin, pathname } = window.location;
-        return `${origin}${pathname}`;
-      } catch {
-        return "";
-      }
-    })();
-  if (returnUrl) params.set("returnUrl", returnUrl);
-  const query = params.toString();
-  return query ? `${base}?${query}` : base;
-}
-
 // Re-export types and functions
 export type { RuntimeConfig, AgentConfig } from "./types.js";
 export {
