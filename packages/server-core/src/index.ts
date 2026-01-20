@@ -85,6 +85,19 @@ export function createServer(): express.Express {
   const demoDistDir = path.resolve(demoAppDir, "dist");
   const demoIndexHtml = path.resolve(demoDistDir, "index.html");
 
+  // Helper function to inject config.js script into HTML
+  const injectConfigScript = (html: string): string => {
+    // Inject config.js before the main script tag
+    const configScript = '<script src="/config.js"></script>';
+    // Try to find the main script tag and inject before it
+    const scriptTagRegex = /(<script[^>]*src=["'][^"']*main[^"']*["'][^>]*>)/i;
+    if (scriptTagRegex.test(html)) {
+      return html.replace(scriptTagRegex, `${configScript}\n    $1`);
+    }
+    // Fallback: inject before closing body tag
+    return html.replace("</body>", `    ${configScript}\n  </body>`);
+  };
+
   if (process.env.NODE_ENV !== "production") {
     // Dev: Vite middleware mounts
     (async () => {
@@ -114,6 +127,7 @@ export function createServer(): express.Express {
         try {
           let template = await fs.promises.readFile(indexPath, "utf-8");
           template = await viteDemo.transformIndexHtml("/", template);
+          template = injectConfigScript(template);
           res.status(200).set({ "Content-Type": "text/html" }).end(template);
         } catch (e) {
           next(e);
@@ -137,6 +151,7 @@ export function createServer(): express.Express {
             `${httpBase}/`,
             template
           );
+          template = injectConfigScript(template);
           res.status(200).set({ "Content-Type": "text/html" }).end(template);
         } catch (e) {
           next(e);
@@ -149,6 +164,7 @@ export function createServer(): express.Express {
             `${httpBase}/`,
             template
           );
+          template = injectConfigScript(template);
           res.status(200).set({ "Content-Type": "text/html" }).end(template);
         } catch (e) {
           next(e);
@@ -169,6 +185,7 @@ export function createServer(): express.Express {
         try {
           let template = await fs.promises.readFile(mcpIndexPath, "utf-8");
           template = await viteMcp.transformIndexHtml(`${mcpBase}/`, template);
+          template = injectConfigScript(template);
           res.status(200).set({ "Content-Type": "text/html" }).end(template);
         } catch (e) {
           next(e);
@@ -178,6 +195,7 @@ export function createServer(): express.Express {
         try {
           let template = await fs.promises.readFile(mcpIndexPath, "utf-8");
           template = await viteMcp.transformIndexHtml(`${mcpBase}/`, template);
+          template = injectConfigScript(template);
           res.status(200).set({ "Content-Type": "text/html" }).end(template);
         } catch (e) {
           next(e);
@@ -186,14 +204,29 @@ export function createServer(): express.Express {
       // Note: No catch-all fallback in dev to avoid intercepting agent apps
     })();
   } else {
+    // Helper function to inject config.js script into HTML
+    const injectConfigScript = (html: string): string => {
+      // Inject config.js before the main script tag
+      const configScript = '<script src="/config.js"></script>';
+      // Try to find the main script tag and inject before it
+      const scriptTagRegex = /(<script[^>]*src=["'][^"']*main[^"']*["'][^>]*>)/i;
+      if (scriptTagRegex.test(html)) {
+        return html.replace(scriptTagRegex, `${configScript}\n    $1`);
+      }
+      // Fallback: inject before closing body tag
+      return html.replace("</body>", `    ${configScript}\n  </body>`);
+    };
+
     // Prod: serve built apps under their subpaths and demo app at '/'
     const httpDistDir = path.resolve(httpAppDir, "dist");
     const httpIndexHtml = path.resolve(httpDistDir, "index.html");
     app.use(httpBase, express.static(httpDistDir));
     app.get([httpBase, `${httpBase}/*`], (_req: Request, res: Response) => {
       if (fs.existsSync(httpIndexHtml)) {
+        let html = fs.readFileSync(httpIndexHtml, "utf-8");
+        html = injectConfigScript(html);
         res.setHeader("Content-Type", "text/html; charset=utf-8");
-        res.send(fs.readFileSync(httpIndexHtml, "utf-8"));
+        res.send(html);
         return;
       }
       res
@@ -206,8 +239,10 @@ export function createServer(): express.Express {
     app.use(mcpBase, express.static(mcpDistDir));
     app.get([mcpBase, `${mcpBase}/*`], (_req: Request, res: Response) => {
       if (fs.existsSync(mcpIndexHtml)) {
+        let html = fs.readFileSync(mcpIndexHtml, "utf-8");
+        html = injectConfigScript(html);
         res.setHeader("Content-Type", "text/html; charset=utf-8");
-        res.send(fs.readFileSync(mcpIndexHtml, "utf-8"));
+        res.send(html);
         return;
       }
       res
@@ -222,8 +257,10 @@ export function createServer(): express.Express {
     // Serve demo app index.html for root and fallback routes
     app.get(["/", ""], (_req: Request, res: Response) => {
       if (fs.existsSync(demoIndexHtml)) {
+        let html = fs.readFileSync(demoIndexHtml, "utf-8");
+        html = injectConfigScript(html);
         res.setHeader("Content-Type", "text/html; charset=utf-8");
-        res.send(fs.readFileSync(demoIndexHtml, "utf-8"));
+        res.send(html);
         return;
       }
       res.status(500).send("Demo app not built. Please run its build first.");
@@ -244,8 +281,10 @@ export function createServer(): express.Express {
         return next();
       }
       if (fs.existsSync(demoIndexHtml)) {
+        let html = fs.readFileSync(demoIndexHtml, "utf-8");
+        html = injectConfigScript(html);
         res.setHeader("Content-Type", "text/html; charset=utf-8");
-        res.send(fs.readFileSync(demoIndexHtml, "utf-8"));
+        res.send(html);
         return;
       }
       res.status(500).send("Demo app not built. Please run its build first.");
