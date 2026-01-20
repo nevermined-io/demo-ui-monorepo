@@ -1,7 +1,8 @@
 /**
  * Configuration system using environment variables
- * This matches the backend's approach using DEFAULT_AGENTS + env vars
+ * Uses centralized DEFAULT_AGENTS from @app/config
  */
+import { DEFAULT_AGENTS } from "@app/config";
 
 export interface AppConfig {
   transport: "http" | "mcp";
@@ -10,20 +11,6 @@ export interface AppConfig {
   environment: string;
   mcpClientId?: string;
 }
-
-// Default agent configurations (matches backend DEFAULT_AGENTS)
-const DEFAULT_AGENTS = {
-  http: {
-    id: "did:nv:f82254a93e8486e102031b6567c2d734f21a71ca793358b1a07d03eb409a546a",
-    endpoint: "http://localhost:3001/ask",
-    environment: "staging_sandbox",
-  },
-  mcp: {
-    id: "did:nv:3fe43029c257aad4694ad037e4ceae5360d7f2061c7982117bf8da9c20614000",
-    endpoint: "http://localhost:4002",
-    environment: "staging_sandbox",
-  },
-};
 
 /**
  * Gets the current application configuration

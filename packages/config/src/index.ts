@@ -55,4 +55,5 @@ export {
   loadAgentConfig,
   loadAllAgentConfigs,
   getAgentById,
+  DEFAULT_AGENTS,
 } from "./agents.js";

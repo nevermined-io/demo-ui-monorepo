@@ -35,9 +35,10 @@ export function formatChatText(text: string): (string | React.ReactElement)[] {
     if (part.match(urlRegex)) {
       const urlObj = new URL(part);
       let friendlyName = part;
-      const didMatch = part.match(/did:nv:[a-f0-9]+/);
-      if (didMatch) {
-        friendlyName = didMatch[0];
+      // Match hexadecimal agent ID (64 characters)
+      const hexMatch = part.match(/[a-f0-9]{64}/i);
+      if (hexMatch) {
+        friendlyName = hexMatch[0];
       } else if (part.match(/\.(jpg|jpeg|png|gif|webp|mp3|mp4)$/i)) {
         friendlyName = urlObj.pathname.split("/").pop() || part;
       } else {

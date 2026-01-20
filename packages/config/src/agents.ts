@@ -2,20 +2,21 @@ import type { AgentConfig, EnvConfig } from "./types.js";
 
 /**
  * Default agent configurations
+ * Centralized defaults used by both server and client
  */
-const DEFAULT_AGENTS: Record<string, AgentConfig> = {
+export const DEFAULT_AGENTS: Record<string, AgentConfig> = {
   http: {
-    id: "did:nv:f82254a93e8486e102031b6567c2d734f21a71ca793358b1a07d03eb409a546a",
+    id: "42840616115630383331636037635687429922763882595058926899462535068495890946712",
     name: "Financial Advisor Agent",
     transport: "http",
-    endpoint: "http://localhost:3001/ask",
+    endpoint: "https://demo-finance-agent.nevermined.dev/ask",
     environment: "staging_sandbox",
   },
   mcp: {
-    id: "did:nv:3fe43029c257aad4694ad037e4ceae5360d7f2061c7982117bf8da9c20614000",
+    id: "25558624986355531588229770682060163846923775146647232049329434255728263209016",
     name: "Weather Agent",
     transport: "mcp",
-    endpoint: "http://localhost:3002/mcp",
+    endpoint: "https://weather-mcp-agent.nevermined.dev/mcp",
     environment: "staging_sandbox",
   },
 };
