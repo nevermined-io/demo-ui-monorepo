@@ -3,22 +3,24 @@
 # --- Builder stage: install deps and build client + server ---
     FROM --platform=linux/amd64 node:20-alpine AS builder
     WORKDIR /app
-    
+
     # Install dependencies needed for native modules
     RUN apk add --no-cache python3 make g++
-    
-    # Enable Corepack and fix Yarn version to 1.22.22
-    RUN corepack enable && corepack prepare yarn@1.22.22 --activate
-    
-    # Copy manifests and install all deps (including dev) for build
-    COPY package.json yarn.lock ./
-    RUN yarn install --frozen-lockfile
+
+    # Enable Corepack for Yarn 4
+    RUN corepack enable
+
+    # Copy Yarn 4 configuration and manifests
+    COPY .yarnrc.yml package.json yarn.lock ./
+
+    # Install all deps (including dev) for build
+    RUN yarn install --immutable
     
     # Copy the rest of the project
     COPY . .
     
     # Fix Rollup native dependencies issue
-    RUN rm -rf node_modules/@rollup/rollup-* && yarn install --frozen-lockfile
+    RUN rm -rf node_modules/@rollup/rollup-* && yarn install --immutable
     
     # Build-time variables for the client (Vite picks them up)
     # Common variables
@@ -55,18 +57,12 @@
     FROM --platform=linux/amd64 node:20-alpine AS runner
     WORKDIR /app
     ENV NODE_ENV=production
-    
-    # Enable Corepack and fix Yarn version to 1.22.22 in runtime
-    RUN corepack enable && corepack prepare yarn@1.22.22 --activate
-    
-    # Copy only what we need from builder
+
+    # Copy built artifacts and dependencies from builder
     COPY --from=builder /app/packages ./packages
     COPY --from=builder /app/apps ./apps
+    COPY --from=builder /app/node_modules ./node_modules
     COPY --from=builder /app/package.json ./package.json
-    COPY --from=builder /app/yarn.lock ./yarn.lock
-    
-    # Install only production dependencies
-    RUN yarn install --frozen-lockfile --production
     
     # The app listens on 3000
     EXPOSE 3000
