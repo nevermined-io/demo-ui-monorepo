@@ -44,10 +44,10 @@ export function loadAgentConfig(transport: "http" | "mcp"): AgentConfig {
   const environment = env.NVM_ENVIRONMENT || "sandbox";
 
   return {
-    id: agentId || defaultAgent.id,
-    name: agentName || defaultAgent.name,
+    id: agentId ?? defaultAgent.id,
+    name: agentName ?? defaultAgent.name,
     transport,
-    endpoint: agentEndpoint || defaultAgent.endpoint,
+    endpoint: agentEndpoint ?? defaultAgent.endpoint,
     environment,
   };
 }

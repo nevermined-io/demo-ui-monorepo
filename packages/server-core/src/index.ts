@@ -1,26 +1,37 @@
-import "dotenv/config";
-import dotenv from "dotenv";
 import express, { type Express, type Request, type Response } from "express";
 import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
 import { registerRoutes } from "@app/server-api";
 
+// Only load dotenv in development - in production (Docker/K8s), env vars come from the environment
+if (process.env.NODE_ENV !== "production") {
+  try {
+    const dotenv = await import("dotenv");
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+    const repoRoot = path.resolve(__dirname, "../../..");
+    dotenv.default.config({ path: path.resolve(repoRoot, ".env") });
+  } catch {}
+}
+
 /**
  * Create an Express server that serves the selected app (monorepo) and exposes /config.js
  */
 export function createServer(): express.Express {
+  // Log environment variables at startup for debugging
+  console.log("[server-core] Environment variables:", {
+    NODE_ENV: process.env.NODE_ENV,
+    NVM_ENVIRONMENT: process.env.NVM_ENVIRONMENT,
+    HTTP_AGENT_ID: process.env.HTTP_AGENT_ID ? "SET" : "NOT SET",
+    HTTP_AGENT_ENDPOINT: process.env.HTTP_AGENT_ENDPOINT ? "SET" : "NOT SET",
+    MCP_AGENT_ID: process.env.MCP_AGENT_ID ? "SET" : "NOT SET",
+    MCP_AGENT_ENDPOINT: process.env.MCP_AGENT_ENDPOINT ? "SET" : "NOT SET",
+  });
+
   const app: Express = express();
   // Parse JSON bodies for API endpoints
   app.use(express.json());
-
-  // Ensure root .env is loaded when running with --prefix packages/server-core
-  try {
-    const __filename = fileURLToPath(import.meta.url);
-    const __dirname = path.dirname(__filename);
-    const repoRoot = path.resolve(__dirname, "../../..");
-    dotenv.config({ path: path.resolve(repoRoot, ".env"), override: false });
-  } catch {}
 
   // Runtime config: exposes window.__RUNTIME_CONFIG__
   app.get("/config.js", (req: Request, res: Response) => {
@@ -34,16 +45,16 @@ export function createServer(): express.Express {
 
     if (isMcpApp) {
       transport = "mcp";
-      agentId = process.env.MCP_AGENT_ID || "";
-      agentEndpoint = process.env.MCP_AGENT_ENDPOINT || "";
+      agentId = process.env.MCP_AGENT_ID ?? "";
+      agentEndpoint = process.env.MCP_AGENT_ENDPOINT ?? "";
     } else {
       // Default to HTTP app
       transport = "http";
-      agentId = process.env.HTTP_AGENT_ID || "";
-      agentEndpoint = process.env.HTTP_AGENT_ENDPOINT || "";
+      agentId = process.env.HTTP_AGENT_ID ?? "";
+      agentEndpoint = process.env.HTTP_AGENT_ENDPOINT ?? "";
     }
 
-    const environment = process.env.NVM_ENVIRONMENT || "sandbox";
+    const environment = process.env.NVM_ENVIRONMENT ?? "sandbox";
 
     const body =
       "window.__RUNTIME_CONFIG__ = Object.assign({}, window.__RUNTIME_CONFIG__, { " +
