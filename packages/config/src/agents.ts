@@ -6,14 +6,16 @@ import type { AgentConfig, EnvConfig } from "./types.js";
  */
 export const DEFAULT_AGENTS: Record<string, AgentConfig> = {
   http: {
-    id: "42840616115630383331636037635687429922763882595058926899462535068495890946712",
+    //id: "42840616115630383331636037635687429922763882595058926899462535068495890946712",
+    id: "1234567890",
     name: "Financial Advisor Agent",
     transport: "http",
     endpoint: "https://demo-finance-agent.nevermined.dev/ask",
     environment: "staging_sandbox",
   },
   mcp: {
-    id: "25558624986355531588229770682060163846923775146647232049329434255728263209016",
+    //id: "25558624986355531588229770682060163846923775146647232049329434255728263209016",
+    id: "9876543210",
     name: "Weather Agent",
     transport: "mcp",
     endpoint: "https://weather-mcp-agent.nevermined.dev/mcp",

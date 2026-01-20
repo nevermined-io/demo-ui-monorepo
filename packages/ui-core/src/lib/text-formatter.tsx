@@ -35,10 +35,18 @@ export function formatChatText(text: string): (string | React.ReactElement)[] {
     if (part.match(urlRegex)) {
       const urlObj = new URL(part);
       let friendlyName = part;
-      // Match hexadecimal agent ID (64 characters)
-      const hexMatch = part.match(/[a-f0-9]{64}/i);
-      if (hexMatch) {
-        friendlyName = hexMatch[0];
+      // Check for Nevermined checkout URLs first - show domain/checkout
+      const isNeverminedCheckout =
+        (urlObj.hostname.endsWith("nevermined.app") ||
+          urlObj.hostname.endsWith("nevermined.dev")) &&
+        urlObj.pathname.startsWith("/checkout");
+      if (isNeverminedCheckout) {
+        const domain = urlObj.hostname.replace("www.", "");
+        friendlyName = `${domain}/checkout`;
+      } else if (part.match(/[a-f0-9]{64}/i)) {
+        // Match hexadecimal agent ID (64 characters) for non-checkout URLs
+        const hexMatch = part.match(/[a-f0-9]{64}/i);
+        friendlyName = hexMatch![0];
       } else if (part.match(/\.(jpg|jpeg|png|gif|webp|mp3|mp4)$/i)) {
         friendlyName = urlObj.pathname.split("/").pop() || part;
       } else {

@@ -810,8 +810,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       ]);
 
       let agentResponse:
-        | { response: string; content?: any }
-        | { response: string; txHash?: string; credits?: number };
+        | { response: string; content?: any; metadata?: any }
+        | { response: string; txHash?: string; credits?: number; metadata?: any };
 
       if (mcpToolCall && mcpToolCall.tool) {
         // MCP tool call requires OAuth access token
@@ -841,30 +841,46 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         },
       ]);
 
-      // Handle transaction if present (only for HTTP agent responses)
+      // Handle transaction if present (HTTP direct response or MCP metadata)
+      // Extract transaction data from either direct response (HTTP) or metadata (MCP)
+      let txHash: string | undefined;
+      let creditsUsed: number | undefined;
+      let planId: string | undefined;
+
       if (
         "txHash" in agentResponse &&
         agentResponse.txHash &&
         "credits" in agentResponse
       ) {
-        const httpResponse = agentResponse as {
-          response: string;
-          txHash: string;
-          credits: number;
-        };
+        // HTTP agent response with direct txHash and credits
+        txHash = agentResponse.txHash;
+        creditsUsed = agentResponse.credits;
+      } else if (
+        agentResponse.metadata &&
+        agentResponse.metadata.txHash &&
+        agentResponse.metadata.creditsRedeemed
+      ) {
+        // MCP agent response with transaction data in metadata
+        txHash = agentResponse.metadata.txHash;
+        creditsUsed = Number(agentResponse.metadata.creditsRedeemed);
+        planId = agentResponse.metadata.planId;
+      }
+
+      if (txHash && creditsUsed !== undefined) {
         setMessages((prev) => [
           ...prev,
           {
             id: prev.length + 1,
-            content: `Task completed. ${httpResponse.credits} credit${
-              httpResponse.credits === 1 ? "" : "s"
+            content: `Task completed. ${creditsUsed} credit${
+              creditsUsed === 1 ? "" : "s"
             } have been deducted from your balance.`,
             type: "nvm-transaction-user",
             isUser: false,
             conversationId: currentConversationId?.toString() || "new",
             timestamp: new Date(),
-            txHash: httpResponse.txHash,
-            credits: httpResponse.credits,
+            txHash,
+            credits: creditsUsed,
+            planId,
           },
         ]);
 
@@ -873,7 +889,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           const data = await getPlanCostRequest();
           const planPrice = Number(data.planPrice);
           const planCredits = Number(data.planCredits);
-          const creditsUsed = Number(httpResponse.credits);
           const cost =
             planCredits > 0 ? (planPrice / planCredits) * creditsUsed : 0;
           setMessages((prev) => [

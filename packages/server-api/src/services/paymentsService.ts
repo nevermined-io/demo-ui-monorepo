@@ -44,7 +44,7 @@ export async function createTaskHttp(
     headers: {
       Accept: "application/json",
       "Content-Type": "application/json",
-      Authorization: `Bearer ${accessToken}`,
+      "payment-signature": accessToken,
     },
     body: JSON.stringify({ input_query: inputQuery }),
   });
