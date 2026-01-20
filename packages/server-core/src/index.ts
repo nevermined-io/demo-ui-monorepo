@@ -98,14 +98,22 @@ export function createServer(): express.Express {
 
   // Helper function to inject config.js script into HTML
   const injectConfigScript = (html: string): string => {
-    // Inject config.js before the main script tag
+    // Inject config.js as a blocking script in the <head> BEFORE any module scripts
+    // This ensures window.__RUNTIME_CONFIG__ is available when the app bundle loads
     const configScript = '<script src="/config.js"></script>';
-    // Try to find the main script tag and inject before it
-    const scriptTagRegex = /(<script[^>]*src=["'][^"']*main[^"']*["'][^>]*>)/i;
-    if (scriptTagRegex.test(html)) {
-      return html.replace(scriptTagRegex, `${configScript}\n    $1`);
+
+    // Try to inject before the first <script type="module"> tag
+    const moduleScriptRegex = /(<script[^>]*type=["']module["'][^>]*>)/i;
+    if (moduleScriptRegex.test(html)) {
+      return html.replace(moduleScriptRegex, `${configScript}\n    $1`);
     }
-    // Fallback: inject before closing body tag
+
+    // Fallback: inject before closing </head> tag
+    if (html.includes("</head>")) {
+      return html.replace("</head>", `    ${configScript}\n  </head>`);
+    }
+
+    // Last resort: inject before closing body tag
     return html.replace("</body>", `    ${configScript}\n  </body>`);
   };
 
@@ -217,21 +225,31 @@ export function createServer(): express.Express {
   } else {
     // Helper function to inject config.js script into HTML
     const injectConfigScript = (html: string): string => {
-      // Inject config.js before the main script tag
+      // Inject config.js as a blocking script in the <head> BEFORE any module scripts
+      // This ensures window.__RUNTIME_CONFIG__ is available when the app bundle loads
       const configScript = '<script src="/config.js"></script>';
-      // Try to find the main script tag and inject before it
-      const scriptTagRegex = /(<script[^>]*src=["'][^"']*main[^"']*["'][^>]*>)/i;
-      if (scriptTagRegex.test(html)) {
-        return html.replace(scriptTagRegex, `${configScript}\n    $1`);
+
+      // Try to inject before the first <script type="module"> tag
+      const moduleScriptRegex = /(<script[^>]*type=["']module["'][^>]*>)/i;
+      if (moduleScriptRegex.test(html)) {
+        return html.replace(moduleScriptRegex, `${configScript}\n    $1`);
       }
-      // Fallback: inject before closing body tag
+
+      // Fallback: inject before closing </head> tag
+      if (html.includes("</head>")) {
+        return html.replace("</head>", `    ${configScript}\n  </head>`);
+      }
+
+      // Last resort: inject before closing body tag
       return html.replace("</body>", `    ${configScript}\n  </body>`);
     };
 
     // Prod: serve built apps under their subpaths and demo app at '/'
     const httpDistDir = path.resolve(httpAppDir, "dist");
     const httpIndexHtml = path.resolve(httpDistDir, "index.html");
-    app.use(httpBase, express.static(httpDistDir));
+    // Use { index: false } so index.html is NOT served by static middleware
+    // This allows our custom handler to inject config.js
+    app.use(httpBase, express.static(httpDistDir, { index: false }));
     app.get([httpBase, `${httpBase}/*`], (_req: Request, res: Response) => {
       if (fs.existsSync(httpIndexHtml)) {
         let html = fs.readFileSync(httpIndexHtml, "utf-8");
@@ -247,7 +265,8 @@ export function createServer(): express.Express {
 
     const mcpDistDir = path.resolve(mcpAppDir, "dist");
     const mcpIndexHtml = path.resolve(mcpDistDir, "index.html");
-    app.use(mcpBase, express.static(mcpDistDir));
+    // Use { index: false } so index.html is NOT served by static middleware
+    app.use(mcpBase, express.static(mcpDistDir, { index: false }));
     app.get([mcpBase, `${mcpBase}/*`], (_req: Request, res: Response) => {
       if (fs.existsSync(mcpIndexHtml)) {
         let html = fs.readFileSync(mcpIndexHtml, "utf-8");
@@ -261,8 +280,9 @@ export function createServer(): express.Express {
         .send("MCP Agent app not built. Please run its build first.");
     });
     // Root app: always Demo app
+    // Use { index: false } so index.html is NOT served by static middleware
     if (fs.existsSync(demoDistDir)) {
-      app.use(express.static(demoDistDir));
+      app.use(express.static(demoDistDir, { index: false }));
     }
 
     // Serve demo app index.html for root and fallback routes
