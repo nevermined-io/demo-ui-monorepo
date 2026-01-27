@@ -116,7 +116,7 @@ export async function createTaskMcp(
     // Extract metadata if present
     const metadata =
       result && typeof result === "object"
-        ? (result as any).metadata
+        ? (result as any)._meta
         : undefined;
 
     // Return full response with content, metadata, and all other properties
@@ -130,7 +130,7 @@ export async function createTaskMcp(
     // Include any other properties from the result (e.g., isError, error, etc.)
     if (result && typeof result === "object") {
       Object.keys(result).forEach((key) => {
-        if (!["content", "metadata"].includes(key)) {
+        if (!["content", "_meta"].includes(key)) {
           response[key] = (result as any)[key];
         }
       });
