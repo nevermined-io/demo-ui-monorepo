@@ -66,6 +66,9 @@ function resolveAppDirectory(req?: Request): string {
     pathPart = referer || "";
   }
 
+  if (pathPart.startsWith("/n8n-agent")) {
+    return resolve(repoRoot, "apps/agent-n8n-app");
+  }
   if (pathPart.startsWith("/mcp-agent")) {
     return resolve(repoRoot, "apps/agent-mcp-app");
   }

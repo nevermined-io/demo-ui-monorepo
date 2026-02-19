@@ -21,12 +21,19 @@ export const DEFAULT_AGENTS: Record<string, AgentConfig> = {
     endpoint: "https://weather-mcp-agent.nevermined.dev/mcp",
     environment: "staging_sandbox",
   },
+  n8n: {
+    id: "n8n-buyer-agent",
+    name: "N8N Buyer Agent",
+    transport: "n8n",
+    endpoint: "http://localhost:4003",
+    environment: "staging_sandbox",
+  },
 };
 
 /**
  * Loads agent configuration from environment variables
  */
-export function loadAgentConfig(transport: "http" | "mcp"): AgentConfig {
+export function loadAgentConfig(transport: "http" | "mcp" | "n8n"): AgentConfig {
   const env = process.env as EnvConfig;
   const defaultAgent = DEFAULT_AGENTS[transport];
 
@@ -35,13 +42,21 @@ export function loadAgentConfig(transport: "http" | "mcp"): AgentConfig {
   }
 
   // Determine which environment variables to use based on transport
-  const agentId = transport === "http" ? env.HTTP_AGENT_ID : env.MCP_AGENT_ID;
+  let agentId: string | undefined;
+  let agentName: string | undefined;
+  let agentEndpoint: string | undefined;
 
-  const agentName =
-    transport === "http" ? env.HTTP_AGENT_NAME : env.MCP_AGENT_NAME;
-
-  const agentEndpoint =
-    transport === "http" ? env.HTTP_AGENT_ENDPOINT : env.MCP_AGENT_ENDPOINT;
+  if (transport === "n8n") {
+    agentEndpoint = env.N8N_WEBHOOK_URL;
+  } else if (transport === "mcp") {
+    agentId = env.MCP_AGENT_ID;
+    agentName = env.MCP_AGENT_NAME;
+    agentEndpoint = env.MCP_AGENT_ENDPOINT;
+  } else {
+    agentId = env.HTTP_AGENT_ID;
+    agentName = env.HTTP_AGENT_NAME;
+    agentEndpoint = env.HTTP_AGENT_ENDPOINT;
+  }
 
   const environment = env.NVM_ENVIRONMENT || "sandbox";
 
@@ -61,6 +76,7 @@ export function loadAllAgentConfigs(): Record<string, AgentConfig> {
   return {
     http: loadAgentConfig("http"),
     mcp: loadAgentConfig("mcp"),
+    n8n: loadAgentConfig("n8n"),
   };
 }
 

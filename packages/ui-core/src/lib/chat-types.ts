@@ -34,7 +34,8 @@ export interface FullMessage {
     | "warning"
     | "usd-info"
     | "notice"
-    | "thinking";
+    | "thinking"
+    | "n8n-step";
   content: string;
   txHash?: string;
   /**

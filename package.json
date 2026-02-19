@@ -6,10 +6,11 @@
     "dev": "yarn --cwd packages/server-core dev",
     "serve:app:http": "MONOREPO_UI_DIR=apps/agent-http-app yarn --cwd packages/server-core dev",
     "serve:app:mcp": "MONOREPO_UI_DIR=apps/agent-mcp-app yarn --cwd packages/server-core dev",
+    "serve:app:n8n": "MONOREPO_UI_DIR=apps/agent-n8n-app yarn --cwd packages/server-core dev",
     "start": "NODE_ENV=production node packages/server-core/dist/index.js",
     "build": "yarn workspaces run build || true",
-    "build:packages": "yarn --cwd packages/domain build && yarn --cwd packages/config build && yarn --cwd packages/agent-client build && yarn --cwd packages/prompts build && yarn --cwd packages/transport-http build && yarn --cwd packages/transport-mcp build && yarn --cwd packages/payments-client build && yarn --cwd packages/server-api build && yarn --cwd packages/ui-core build && yarn --cwd packages/server-core build",
-    "build:apps": "yarn --cwd apps/demo-app build && yarn --cwd apps/agent-http-app build && yarn --cwd apps/agent-mcp-app build",
+    "build:packages": "yarn --cwd packages/domain build && yarn --cwd packages/config build && yarn --cwd packages/agent-client build && yarn --cwd packages/prompts build && yarn --cwd packages/transport-http build && yarn --cwd packages/transport-mcp build && yarn --cwd packages/transport-n8n build && yarn --cwd packages/payments-client build && yarn --cwd packages/server-api build && yarn --cwd packages/ui-core build && yarn --cwd packages/server-core build",
+    "build:apps": "yarn --cwd apps/demo-app build && yarn --cwd apps/agent-http-app build && yarn --cwd apps/agent-mcp-app build && yarn --cwd apps/agent-n8n-app build",
     "clean": "yarn workspaces run clean || true",
     "typecheck": "yarn workspaces run typecheck",
     "lint": "yarn workspaces run lint || true"

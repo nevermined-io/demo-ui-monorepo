@@ -71,7 +71,9 @@ export default function MessageGroup({
                     ? "text-yellow-900 rounded-lg font-medium p-3"
                     : messages[0].type === "thinking"
                       ? "inline-block bg-gradient-to-r from-muted/90 via-muted/60 to-muted/90 text-muted-foreground rounded-lg p-3 animate-pulse shadow-sm border border-muted-foreground/20"
-                      : "text-card-foreground"
+                      : messages[0].type === "n8n-step"
+                        ? "p-0"
+                        : "text-card-foreground"
         )}
       >
         <div className="space-y-4">
@@ -164,6 +166,20 @@ export default function MessageGroup({
                 </div>
               );
             }
+            if (message.type === "n8n-step") {
+              return (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="flex items-center gap-2 bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border border-cyan-500/20 rounded-lg p-3"
+                >
+                  <span className="inline-block w-2 h-2 rounded-full bg-cyan-500 animate-pulse flex-shrink-0" />
+                  <span className="text-sm">{text}</span>
+                </motion.div>
+              );
+            }
             if (message.type === "authorize") {
               const authUrl = (message as any).metadata?.authUrl;
 
@@ -200,12 +216,17 @@ export default function MessageGroup({
               );
             }
             if (message.type === "thinking") {
+              const hasContent = message.content && message.content !== "...";
               return (
                 <div
                   key={index}
                   className="flex items-center gap-2 text-muted-foreground"
                 >
-                  <span className="text-sm tracking-widest">...</span>
+                  {hasContent ? (
+                    <span className="text-sm">{message.content}</span>
+                  ) : (
+                    <span className="text-sm tracking-widest">...</span>
+                  )}
                 </div>
               );
             }
