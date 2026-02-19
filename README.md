@@ -42,7 +42,7 @@ The external agents used in this demo are available in the [Nevermined Tutorials
 
 - **[Financial Agent](https://github.com/nevermined-io/tutorials/tree/main/financial-agent)** - HTTP REST agent for financial advice
 - **[Weather MCP Agent](https://github.com/nevermined-io/tutorials/tree/main/mcp-examples/weather-mcp)** - MCP agent for weather information
-- **n8n Buyer Agent** - Async workflow agent that fetches and compares revenue articles using x402/Visa payments, orchestrated via n8n
+- **n8n Buyer Agent** - Async workflow agent that fetches and compares financial records using x402/Visa payments, orchestrated via n8n
 
 ## Technical Architecture
 
@@ -197,7 +197,7 @@ docker run -p 3000:3000 \
 #### `apps/agent-n8n-app/`
 - **Purpose**: n8n agent communication interface
 - **Technology**: React + TypeScript
-- **Features**: Async workflow agent with real-time SSE event streaming. Triggers an n8n buyer agent that fetches and compares revenue articles using x402/Visa payments. No credit/payment flow on the user side.
+- **Features**: Async workflow agent with real-time SSE event streaming. Triggers an n8n buyer agent that fetches and compares financial records using x402/Visa payments. No credit/payment flow on the user side.
 
 ### Backend Services (`packages/`)
 
@@ -299,7 +299,7 @@ User Input → Frontend → Backend → OpenAI (Tool Selection) → MCP Client �
 #### 3. n8n Agent Communication
 
 **Protocol**: HTTP trigger + SSE callbacks
-**Agent Type**: Buyer Agent (revenue article analysis)
+**Agent Type**: Buyer Agent (financial record analysis)
 **Capabilities**: Async multi-step workflows with real-time progress events
 
 **Flow**:

@@ -582,9 +582,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Respond immediately — the rest happens in the background
       res.json({ output: "Processing your request...", sessionId });
 
-      // Single POST to the research agent with all years.
+      // Single POST to the n8n agent with all years.
       // The agent sends intermediate events to callbackUrl during processing.
-      // When done, its HTTP response contains the final summary/articles.
+      // When done, its HTTP response contains the final summary/financial records.
       (async () => {
         try {
           const agentResp = await fetch(agentUrl, {

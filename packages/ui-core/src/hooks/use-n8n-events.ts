@@ -30,8 +30,8 @@ export function n8nEventToMessage(event: N8nEvent): string {
     case "article_fetched":
       return d.message ||
         (d.articleTitle || d.title
-          ? `Article fetched: *${d.articleTitle || d.title}*`
-          : `Article fetched for year ${d.year ?? ""}`);
+          ? `Financial record fetched: *${d.articleTitle || d.title}*`
+          : `Financial record fetched for year ${d.year ?? ""}`);
     case "next_year":
       return d.message ||
         (d.progress
@@ -40,7 +40,7 @@ export function n8nEventToMessage(event: N8nEvent): string {
     case "summarizing":
       return d.message ||
         (d.articleCount || d.count
-          ? `Generating summary of ${d.articleCount ?? d.count} articles...`
+          ? `Generating summary of ${d.articleCount ?? d.count} financial records...`
           : `Generating summary for year ${d.year ?? ""}...`);
     case "complete":
       return d.summary || d.message || "Analysis complete.";
