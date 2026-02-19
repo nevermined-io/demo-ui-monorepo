@@ -27,6 +27,7 @@ import {
 } from "./utils";
 import { useUserState } from "./user-state-context";
 import { useAppConfig } from "./config";
+import { n8nEventToMessage } from "@/hooks/use-n8n-events";
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
@@ -392,6 +393,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       // Determine which authentication token to use based on transport
       const { transport } = appConfig;
       const authToken =
+        transport === "n8n" ? "" :
         transport === "mcp" ? mcpAccessToken || "" : apiKey || "";
 
       console.log("[ChatProvider] Calling LLM router with:", {
@@ -709,6 +711,153 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           timestamp: new Date(),
         },
       ]);
+      return;
+    }
+
+    // ── N8N transport: simplified flow (no auth, no credits) ──
+    if (appConfig.transport === "n8n" && llmAction === "forward") {
+      // Create conversation if needed
+      if (!currentConversationId) {
+        let title = content.slice(0, 30) + "...";
+        try {
+          const data = await titleSummarizeRequest(llmHistory);
+          if (data.title) title = data.title;
+        } catch (e) {
+          console.error(e);
+        }
+        const newConversation: Conversation = {
+          id: conversations.length + 1,
+          title,
+          timestamp: new Date(),
+        };
+        setConversations((prev) => [newConversation, ...prev]);
+        setCurrentConversationId(newConversation.id);
+      }
+
+      // Synthesize intent
+      let agentInput = content;
+      try {
+        const data = await intentSynthesizeRequest(llmHistory);
+        if (typeof data.intent === "string" && data.intent) {
+          agentInput = data.intent;
+        }
+      } catch (e) {
+        console.warn("[ChatProvider] N8N intent synthesis failed, using raw:", e);
+      }
+
+      // Show thinking message
+      const thinkingId = Date.now();
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: thinkingId,
+          content: "...",
+          type: "thinking",
+          isUser: false,
+          conversationId: currentConversationId?.toString() || "new",
+          timestamp: new Date(),
+        },
+      ]);
+
+      try {
+        // Trigger n8n via server proxy
+        const triggerResp = await fetch("/api/n8n/trigger", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ input: agentInput }),
+        });
+        if (!triggerResp.ok) throw new Error("Failed to trigger n8n agent");
+        const { sessionId } = await triggerResp.json();
+
+        if (!sessionId) throw new Error("No sessionId returned from n8n trigger");
+
+        // Open SSE connection and stream events as chat messages
+        const convId = currentConversationId?.toString() || "new";
+
+        // Remove initial thinking before SSE starts
+        setMessages((prev) => prev.filter((m) => m.id !== thinkingId));
+
+        const source = new EventSource(`/api/n8n/events/${sessionId}`);
+
+        source.onmessage = (e) => {
+          try {
+            const event = JSON.parse(e.data);
+            const text = n8nEventToMessage(event);
+
+            if (event.step === "complete") {
+              // Final answer: remove any remaining thinking placeholder, keep notices
+              setMessages((prev) => [
+                ...prev.filter((m) => m.type !== "thinking"),
+                {
+                  id: Date.now(),
+                  content: text,
+                  type: "answer",
+                  isUser: false,
+                  conversationId: convId,
+                  timestamp: new Date(),
+                },
+              ]);
+              source.close();
+            } else if (event.step === "error") {
+              setMessages((prev) => [
+                ...prev.filter((m) => m.type !== "thinking"),
+                {
+                  id: Date.now(),
+                  content: text,
+                  type: "error",
+                  isUser: false,
+                  conversationId: convId,
+                  timestamp: new Date(),
+                },
+              ]);
+              source.close();
+            } else {
+              // Intermediate event → accumulate as n8n-step (persists in chat)
+              setMessages((prev) => [
+                ...prev.filter((m) => m.type !== "thinking"),
+                {
+                  id: Date.now(),
+                  content: text,
+                  type: "n8n-step",
+                  isUser: false,
+                  conversationId: convId,
+                  timestamp: new Date(),
+                },
+              ]);
+            }
+          } catch {
+            // Ignore malformed events
+          }
+        };
+
+        source.onerror = () => {
+          setMessages((prev) => [
+            ...prev.filter((m) => m.type !== "thinking"),
+            {
+              id: Date.now(),
+              content: "Connection lost to n8n agent. Please try again.",
+              type: "error",
+              isUser: false,
+              conversationId: convId,
+              timestamp: new Date(),
+            },
+          ]);
+          source.close();
+        };
+      } catch (error) {
+        console.error("[ChatProvider] N8N trigger error:", error);
+        setMessages((prev) => [
+          ...prev.filter((m) => m.type !== "thinking"),
+          {
+            id: Date.now(),
+            content: "Error communicating with the n8n agent. Please try again.",
+            type: "error",
+            isUser: false,
+            conversationId: currentConversationId?.toString() || "new",
+            timestamp: new Date(),
+          },
+        ]);
+      }
       return;
     }
 

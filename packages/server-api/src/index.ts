@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Response } from "express";
 import { createServer, type Server } from "http";
 import {
   llmRouter,
@@ -23,6 +23,7 @@ import {
 } from "./services/promptService.js";
 import { loadAgentConfig } from "@app/config";
 import { decodeAccessToken } from "@nevermined-io/payments";
+import crypto from "crypto";
 
 /**
  * Helper function to extract planId from MCP OAuth access token.
@@ -482,6 +483,227 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } else {
       res.status(400).json({ error: result.message });
     }
+  });
+
+  // ── N8N Agent: in-memory session store ──────────────────────────────
+  interface N8nEvent {
+    sessionId: string;
+    timestamp: string;
+    step: string;
+    data?: any;
+  }
+  interface N8nSession {
+    events: N8nEvent[];
+    sseClients: Set<Response>;
+  }
+  const n8nSessions = new Map<string, N8nSession>();
+
+  const SESSION_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+
+  /**
+   * Pushes an event to an n8n session and notifies all SSE clients.
+   */
+  function pushN8nEvent(sessionId: string, step: string, data?: any) {
+    const session = n8nSessions.get(sessionId);
+    if (!session) return;
+
+    const event: N8nEvent = {
+      sessionId,
+      timestamp: new Date().toISOString(),
+      step,
+      data,
+    };
+    session.events.push(event);
+
+    for (const client of session.sseClients) {
+      try {
+        client.write(`data: ${JSON.stringify(event)}\n\n`);
+      } catch {}
+    }
+
+    // If complete or error, close SSE connections after a short delay
+    if (step === "complete" || step === "error") {
+      setTimeout(() => {
+        for (const client of session.sseClients) {
+          try { client.end(); } catch {}
+        }
+        session.sseClients.clear();
+      }, 500);
+    }
+  }
+
+  /**
+   * Extracts year numbers from a text string.
+   * Looks for 4-digit numbers between 1900 and 2100.
+   */
+  function parseYearsFromInput(input: string): number[] {
+    const matches = input.match(/\b(19|20)\d{2}\b/g);
+    if (!matches || matches.length === 0) return [2021, 2024]; // defaults
+    return [...new Set(matches.map(Number))].sort();
+  }
+
+  /**
+   * POST /api/n8n/trigger
+   * Receives { input } from the frontend, parses years, calls the research
+   * agent once per year (sequentially). The agent sends intermediate events
+   * to /api/n8n/callback which streams them to the frontend via SSE.
+   * After all years are processed, pushes a final "complete" event.
+   */
+  app.post("/api/n8n/trigger", async (req, res) => {
+    try {
+      const { input } = req.body || {};
+      if (typeof input !== "string") {
+        return res.status(400).json({ error: "Missing or invalid input" });
+      }
+
+      const sessionId = crypto.randomUUID();
+      n8nSessions.set(sessionId, { events: [], sseClients: new Set() });
+
+      // Auto-cleanup after timeout
+      setTimeout(() => {
+        const session = n8nSessions.get(sessionId);
+        if (session) {
+          for (const client of session.sseClients) {
+            try { client.end(); } catch {}
+          }
+          n8nSessions.delete(sessionId);
+        }
+      }, SESSION_TIMEOUT_MS);
+
+      const years = parseYearsFromInput(input);
+      const agentConfig = loadAgentConfig("n8n");
+      const agentUrl = agentConfig.endpoint;
+
+      // Callback URL — sessionId sent as a separate field
+      const protocol = req.protocol;
+      const host = req.get("host") || "localhost:3000";
+      const callbackUrl = `${protocol}://${host}/api/n8n/callback`;
+
+      // Respond immediately — the rest happens in the background
+      res.json({ output: "Processing your request...", sessionId });
+
+      // Single POST to the research agent with all years.
+      // The agent sends intermediate events to callbackUrl during processing.
+      // When done, its HTTP response contains the final summary/articles.
+      (async () => {
+        try {
+          const agentResp = await fetch(agentUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ years, callbackUrl, sessionId }),
+          });
+          const agentData = await agentResp.json();
+          console.log("[n8n/trigger] Agent response:", JSON.stringify(agentData).slice(0, 500));
+
+          // Push the final "complete" event with the summary from the agent response
+          pushN8nEvent(sessionId, "complete", {
+            summary: agentData.summary || agentData.message || "Analysis complete.",
+            articles: agentData.articles || [],
+          });
+        } catch (err) {
+          console.error("[n8n/trigger] Failed to call research agent:", err);
+          pushN8nEvent(sessionId, "error", {
+            message: "Failed to reach research agent",
+          });
+        }
+      })();
+    } catch (error) {
+      console.error("[n8n/trigger] Error:", error);
+      if (!res.headersSent) {
+        return res.status(500).json({ error: "Failed to trigger n8n agent" });
+      }
+    }
+  });
+
+  /**
+   * POST /api/n8n/callback
+   * Receives events from the research agent.
+   * sessionId comes from the query param (set by our trigger), not from the body
+   * (which contains the agent's own sessionId).
+   */
+  app.post("/api/n8n/callback", (req, res) => {
+    const { sessionId, timestamp, step, data } = req.body || {};
+
+    console.log("[n8n/callback] Received:", { sessionId, step, data: JSON.stringify(data)?.slice(0, 300) });
+
+    if (!sessionId || !step) {
+      return res.status(400).json({ error: "Missing sessionId query param or step in body" });
+    }
+
+    // Ignore "complete" from callbacks — we generate our own from the HTTP response
+    // (which includes the full summary). This avoids duplicate complete events.
+    if (step === "complete") {
+      return res.status(200).json({ ok: true, ignored: true });
+    }
+
+    let session = n8nSessions.get(sessionId);
+    if (!session) {
+      // Create session on the fly if it doesn't exist yet (race condition safety)
+      session = { events: [], sseClients: new Set() };
+      n8nSessions.set(sessionId, session);
+    }
+
+    const event: N8nEvent = {
+      sessionId,
+      timestamp: timestamp || new Date().toISOString(),
+      step,
+      data,
+    };
+    session.events.push(event);
+
+    // Push to all connected SSE clients
+    for (const client of session.sseClients) {
+      try {
+        client.write(`data: ${JSON.stringify(event)}\n\n`);
+      } catch {}
+    }
+
+    return res.status(200).json({ ok: true });
+  });
+
+  /**
+   * GET /api/n8n/events/:sessionId
+   * SSE endpoint. Replays existing events then streams new ones in real time.
+   */
+  app.get("/api/n8n/events/:sessionId", (req, res) => {
+    const { sessionId } = req.params;
+    const session = n8nSessions.get(sessionId);
+    if (!session) {
+      return res.status(404).json({ error: "Session not found" });
+    }
+
+    // Set up SSE headers
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.flushHeaders();
+
+    // Replay existing events
+    for (const event of session.events) {
+      res.write(`data: ${JSON.stringify(event)}\n\n`);
+    }
+
+    // Check if session is already complete
+    const isComplete = session.events.some((e) => e.step === "complete" || e.step === "error");
+    if (isComplete) {
+      res.end();
+      return;
+    }
+
+    // Register this client for future events
+    session.sseClients.add(res);
+
+    // Safety timeout
+    const timeout = setTimeout(() => {
+      session.sseClients.delete(res);
+      try { res.end(); } catch {}
+    }, SESSION_TIMEOUT_MS);
+
+    // Clean up on client disconnect
+    req.on("close", () => {
+      clearTimeout(timeout);
+      session.sseClients.delete(res);
+    });
   });
 
   const httpServer = createServer(app);

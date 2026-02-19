@@ -25,7 +25,7 @@ The platform acts as a **proxy and orchestration layer** between frontend applic
 
 - **Authentication and authorization** using Nevermined's payment system
 - **Credit management** with blockchain-based transactions
-- **Agent communication** via HTTP REST and MCP (Model Context Protocol)
+- **Agent communication** via HTTP REST, MCP (Model Context Protocol), and n8n (async callbacks via SSE)
 - **Intent synthesis** using OpenAI's LLM services
 - **Response processing** and user experience optimization
 
@@ -42,6 +42,7 @@ The external agents used in this demo are available in the [Nevermined Tutorials
 
 - **[Financial Agent](https://github.com/nevermined-io/tutorials/tree/main/financial-agent)** - HTTP REST agent for financial advice
 - **[Weather MCP Agent](https://github.com/nevermined-io/tutorials/tree/main/mcp-examples/weather-mcp)** - MCP agent for weather information
+- **n8n Buyer Agent** - Async workflow agent that fetches and compares revenue articles using x402/Visa payments, orchestrated via n8n
 
 ## Technical Architecture
 
@@ -50,7 +51,7 @@ The external agents used in this demo are available in the [Nevermined Tutorials
 - **Frontend**: React 19, TypeScript, Vite, Tailwind CSS
 - **Backend**: Node.js, Express, TypeScript
 - **Monorepo**: Yarn Workspaces
-- **Agent Protocols**: HTTP REST, MCP (Model Context Protocol)
+- **Agent Protocols**: HTTP REST, MCP (Model Context Protocol), n8n (async callbacks via SSE)
 - **AI Services**: OpenAI GPT-4
 - **Payment System**: [Nevermined Payments SDK](https://docs.nevermined.app/)
 
@@ -63,6 +64,7 @@ The external agents used in this demo are available in the [Nevermined Tutorials
 │                 │    │                  │    │                 │
 │ • HTTP Client   │    │ • API Routes     │    │ • HTTP Agent    │
 │ • MCP Client    │    │ • Auth Service   │    │ • MCP Agent     │
+│ • n8n Client    │    │ • SSE Streaming  │    │ • n8n Agent     │
 │ • UI Components │    │ • Payment Logic  │    │                 │
 └─────────────────┘    └──────────────────┘    └─────────────────┘
                                 │
@@ -115,6 +117,8 @@ HTTP_AGENT_ENDPOINT=http://localhost:3001/ask
 
 MCP_AGENT_ID=25558624986355531588229770682060163846923775146647232049329434255728263209016
 MCP_AGENT_ENDPOINT=http://localhost:3002/mcp
+
+N8N_WEBHOOK_URL=http://localhost:4003
 ```
 
 #### 4. Build the Project
@@ -135,6 +139,9 @@ yarn serve:app:http
 
 # Start with MCP agent app
 yarn serve:app:mcp
+
+# Start with n8n agent app
+yarn serve:app:n8n
 ```
 
 #### 6. Access the Application
@@ -142,6 +149,7 @@ yarn serve:app:mcp
 - **Main Application**: http://localhost:3000
 - **HTTP Agent App**: http://localhost:3000/simple-agent/
 - **MCP Agent App**: http://localhost:3000/mcp-agent/
+- **n8n Agent App**: http://localhost:3000/n8n-agent/
 
 ### Production Deployment
 
@@ -186,6 +194,11 @@ docker run -p 3000:3000 \
 - **Technology**: React + TypeScript
 - **Features**: Weather agent with tool-based interactions
 
+#### `apps/agent-n8n-app/`
+- **Purpose**: n8n agent communication interface
+- **Technology**: React + TypeScript
+- **Features**: Async workflow agent with real-time SSE event streaming. Triggers an n8n buyer agent that fetches and compares revenue articles using x402/Visa payments. No credit/payment flow on the user side.
+
 ### Backend Services (`packages/`)
 
 #### `packages/server-core/`
@@ -207,6 +220,11 @@ docker run -p 3000:3000 \
 - **Purpose**: MCP agent client implementation
 - **Technology**: TypeScript + MCP SDK
 - **Features**: Model Context Protocol communication
+
+#### `packages/transport-n8n/`
+- **Purpose**: n8n agent client implementation
+- **Technology**: TypeScript
+- **Features**: Async workflow triggering with SSE event streaming via callbacks
 
 #### `packages/ui-core/`
 - **Purpose**: Shared UI components and utilities
@@ -277,6 +295,32 @@ User Input → Frontend → Backend → OpenAI (Tool Selection) → MCP Client �
 - Tool discovery and execution
 - Structured response parsing
 - Connection management
+
+#### 3. n8n Agent Communication
+
+**Protocol**: HTTP trigger + SSE callbacks
+**Agent Type**: Buyer Agent (revenue article analysis)
+**Capabilities**: Async multi-step workflows with real-time progress events
+
+**Flow**:
+```
+User Input → Frontend → Backend → n8n Workflow (trigger)
+                                       ↓
+                              n8n sends callbacks → Backend stores events → SSE → Frontend
+                                       ↓
+                              n8n returns final summary → Backend pushes complete event → Frontend
+```
+
+**Implementation**:
+- Frontend sends user input to `POST /api/n8n/trigger`
+- Backend parses years from intent, triggers n8n workflow with `{ years, callbackUrl, sessionId }`
+- Backend returns `sessionId` immediately
+- Frontend opens SSE connection to `GET /api/n8n/events/:sessionId`
+- n8n workflow sends intermediate events (started, payment_required, article_fetched, etc.) to `POST /api/n8n/callback`
+- Backend pushes each event to SSE clients
+- Final summary comes from the n8n HTTP response (not callbacks)
+- Events display as styled `n8n-step` messages (cyan cards) in the chat
+- No credit/payment flow on the user side — Visa credentials are handled inside n8n
 
 ### Detailed Communication Flow
 

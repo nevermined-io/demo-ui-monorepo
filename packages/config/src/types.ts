@@ -4,7 +4,7 @@
 export interface AgentConfig {
   id: string;
   name: string;
-  transport: "http" | "mcp";
+  transport: "http" | "mcp" | "n8n";
   endpoint: string;
   environment: string;
 }
@@ -13,7 +13,7 @@ export interface AgentConfig {
  * Runtime configuration interface
  */
 export interface RuntimeConfig {
-  transport: "http" | "mcp";
+  transport: "http" | "mcp" | "n8n";
   agent: AgentConfig;
   environment: string;
 }
@@ -32,7 +32,10 @@ export interface EnvConfig {
   MCP_AGENT_NAME?: string;
   MCP_AGENT_ENDPOINT?: string;
 
+  // N8N Agent
+  N8N_WEBHOOK_URL?: string;
+
   // Common
   NVM_ENVIRONMENT?: string;
-  TRANSPORT?: "http" | "mcp";
+  TRANSPORT?: "http" | "mcp" | "n8n";
 }

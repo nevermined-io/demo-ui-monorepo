@@ -57,13 +57,14 @@ export default function ChatContainer() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
 
-  // Prepare help modal copy based on transport (http vs mcp)
+  // Prepare help modal copy based on transport (http vs mcp vs n8n)
   const { transport } = useAppConfig();
   const isMcp = transport === "mcp";
+  const isN8n = transport === "n8n";
 
-  // Check if user is authenticated (API Key for HTTP, OAuth token for MCP)
-  const hasApiKey = isMcp ? isMcpAuthenticated : !!apiKey;
-  const appTitle = isMcp ? "Weather Agent" : "Financial Advisor AI";
+  // Check if user is authenticated (API Key for HTTP, OAuth token for MCP, always true for N8N)
+  const hasApiKey = isN8n ? false : isMcp ? isMcpAuthenticated : !!apiKey;
+  const appTitle = isN8n ? "N8N Buyer Agent" : isMcp ? "Weather Agent" : "Financial Advisor AI";
   const helpTitle = isMcp
     ? "About the Weather Agent"
     : "About this Financial Advisor";

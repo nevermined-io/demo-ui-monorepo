@@ -27,6 +27,7 @@ export function createServer(): express.Express {
     HTTP_AGENT_ENDPOINT: process.env.HTTP_AGENT_ENDPOINT ? "SET" : "NOT SET",
     MCP_AGENT_ID: process.env.MCP_AGENT_ID ? "SET" : "NOT SET",
     MCP_AGENT_ENDPOINT: process.env.MCP_AGENT_ENDPOINT ? "SET" : "NOT SET",
+    N8N_WEBHOOK_URL: process.env.N8N_WEBHOOK_URL ? "SET" : "NOT SET",
   });
 
   const app: Express = express();
@@ -38,12 +39,16 @@ export function createServer(): express.Express {
     // Determine transport based on the referer header or default to HTTP
     const referer = req.get("Referer") || "";
     const isMcpApp = referer.includes("/mcp-agent");
+    const isN8nApp = referer.includes("/n8n-agent");
 
     let transport = "http";
     let agentId = "";
     let agentEndpoint = "";
 
-    if (isMcpApp) {
+    if (isN8nApp) {
+      transport = "n8n";
+      agentEndpoint = process.env.N8N_WEBHOOK_URL ?? "";
+    } else if (isMcpApp) {
       transport = "mcp";
       agentId = process.env.MCP_AGENT_ID ?? "";
       agentEndpoint = process.env.MCP_AGENT_ENDPOINT ?? "";
@@ -80,9 +85,11 @@ export function createServer(): express.Express {
   const repoRoot = path.resolve(__dirname, "../../..");
   const httpAppDir = path.resolve(repoRoot, "apps/agent-http-app");
   const mcpAppDir = path.resolve(repoRoot, "apps/agent-mcp-app");
+  const n8nAppDir = path.resolve(repoRoot, "apps/agent-n8n-app");
   const landingAppDir = path.resolve(repoRoot, "apps/landing-app");
   const httpBase = "/simple-agent";
   const mcpBase = "/mcp-agent";
+  const n8nBase = "/n8n-agent";
   const demoAppDir = path.resolve(repoRoot, "apps/demo-app");
 
   // Minimal landing page at /, served via Vite in dev and static in prod
@@ -134,6 +141,7 @@ export function createServer(): express.Express {
         if (
           p.startsWith(httpBase) ||
           p.startsWith(mcpBase) ||
+          p.startsWith(n8nBase) ||
           p.startsWith("/api") ||
           p === "/config.js"
         ) {
@@ -220,6 +228,47 @@ export function createServer(): express.Express {
           next(e);
         }
       });
+      // N8N Agent
+      const viteN8n = await createViteServer({
+        root: n8nAppDir,
+        configFile: path.resolve(n8nAppDir, "vite.config.ts"),
+        base: `${n8nBase}/`,
+        server: { middlewareMode: true, hmr: { port: 24680 } },
+        appType: "custom",
+      } as any);
+      app.use(n8nBase, viteN8n.middlewares);
+      const n8nIndexPath = path.resolve(n8nAppDir, "index.html");
+      // Redirect /n8n-agent to /n8n-agent/ so relative asset paths resolve correctly
+      app.get(n8nBase, (_req, res, next) => {
+        if (!_req.path.endsWith("/")) return res.redirect(`${n8nBase}/`);
+        next();
+      });
+      app.get(`${n8nBase}/`, async (_req, res, next) => {
+        try {
+          let template = await fs.promises.readFile(n8nIndexPath, "utf-8");
+          template = await viteN8n.transformIndexHtml(
+            `${n8nBase}/`,
+            template
+          );
+          template = injectConfigScript(template);
+          res.status(200).set({ "Content-Type": "text/html" }).end(template);
+        } catch (e) {
+          next(e);
+        }
+      });
+      app.get(`${n8nBase}/*`, async (_req, res, next) => {
+        try {
+          let template = await fs.promises.readFile(n8nIndexPath, "utf-8");
+          template = await viteN8n.transformIndexHtml(
+            `${n8nBase}/`,
+            template
+          );
+          template = injectConfigScript(template);
+          res.status(200).set({ "Content-Type": "text/html" }).end(template);
+        } catch (e) {
+          next(e);
+        }
+      });
       // Note: No catch-all fallback in dev to avoid intercepting agent apps
     })();
   } else {
@@ -279,6 +328,23 @@ export function createServer(): express.Express {
         .status(500)
         .send("MCP Agent app not built. Please run its build first.");
     });
+
+    const n8nDistDir = path.resolve(n8nAppDir, "dist");
+    const n8nIndexHtml = path.resolve(n8nDistDir, "index.html");
+    app.use(n8nBase, express.static(n8nDistDir, { index: false }));
+    app.get([n8nBase, `${n8nBase}/*`], (_req: Request, res: Response) => {
+      if (fs.existsSync(n8nIndexHtml)) {
+        let html = fs.readFileSync(n8nIndexHtml, "utf-8");
+        html = injectConfigScript(html);
+        res.setHeader("Content-Type", "text/html; charset=utf-8");
+        res.send(html);
+        return;
+      }
+      res
+        .status(500)
+        .send("N8N Agent app not built. Please run its build first.");
+    });
+
     // Root app: always Demo app
     // Use { index: false } so index.html is NOT served by static middleware
     if (fs.existsSync(demoDistDir)) {
@@ -304,6 +370,7 @@ export function createServer(): express.Express {
       if (
         p.startsWith(httpBase) ||
         p.startsWith(mcpBase) ||
+        p.startsWith(n8nBase) ||
         p.startsWith("/api") ||
         p.startsWith("/assets/") ||
         p.startsWith("/vite.svg") ||

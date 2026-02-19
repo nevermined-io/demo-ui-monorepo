@@ -71,10 +71,16 @@ export function UserStateProvider({ children }: { children: React.ReactNode }) {
     try {
       const { transport } = useAppConfig();
 
+      // N8N transport has no credit system
+      if (transport === "n8n") {
+        setCredits(null);
+        return null;
+      }
+
       // Determine which credential to use based on transport
       let authToken = "";
       let planIdHeader = "";
-      
+
       if (transport === "http") {
         if (!apiKey) {
           setCredits(null);

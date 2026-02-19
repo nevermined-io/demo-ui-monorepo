@@ -13,7 +13,7 @@ export function loadRuntimeConfig(req?: any): RuntimeConfig {
   // Determine transport from various sources
   const transport = (fromWindow.transport ||
     process.env.TRANSPORT ||
-    "http") as "http" | "mcp";
+    "http") as "http" | "mcp" | "n8n";
 
   // Load agent configuration based on transport
   const agent = loadAgentConfig(transport);
@@ -45,7 +45,7 @@ export function getCurrentAgent(): AgentConfig {
 /**
  * Gets agent configuration by transport type
  */
-export function getAgentByTransport(transport: "http" | "mcp"): AgentConfig {
+export function getAgentByTransport(transport: "http" | "mcp" | "n8n"): AgentConfig {
   return loadAgentConfig(transport);
 }
 

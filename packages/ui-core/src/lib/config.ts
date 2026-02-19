@@ -5,7 +5,7 @@
 import { DEFAULT_AGENTS } from "@app/config";
 
 export interface AppConfig {
-  transport: "http" | "mcp";
+  transport: "http" | "mcp" | "n8n";
   agentId: string;
   agentEndpoint: string;
   environment: string;
@@ -23,9 +23,10 @@ export function getAppConfig(): AppConfig {
 
   // Determine transport from path or window config
   const currentPath = window.location.pathname;
-  const transport: "http" | "mcp" =
-    (fromWindow.transport as "http" | "mcp") ||
-    (currentPath.includes("mcp") ? "mcp" : "http");
+  const transport: "http" | "mcp" | "n8n" =
+    (fromWindow.transport as "http" | "mcp" | "n8n") ||
+    (currentPath.includes("/n8n-agent") ? "n8n" :
+     currentPath.includes("mcp") ? "mcp" : "http");
 
   const defaults = DEFAULT_AGENTS[transport as keyof typeof DEFAULT_AGENTS];
 
@@ -48,7 +49,20 @@ export function getAppConfig(): AppConfig {
 
   let config: AppConfig;
 
-  if (transport === "http") {
+  if (transport === "n8n") {
+    config = {
+      transport: "n8n",
+      agentId: fromWindow.agentId || defaults.id,
+      agentEndpoint:
+        fromWindow.agentEndpoint ||
+        (env.VITE_N8N_WEBHOOK_URL as string) ||
+        defaults.endpoint,
+      environment:
+        fromWindow.environment ||
+        (env.VITE_NVM_ENVIRONMENT as string) ||
+        defaults.environment,
+    };
+  } else if (transport === "http") {
     config = {
       transport: "http",
       agentId:
@@ -101,7 +115,7 @@ export function getAppConfig(): AppConfig {
  * Gets the current transport mode
  * Can be used in both React components and regular functions
  */
-export function getTransport(): "http" | "mcp" {
+export function getTransport(): "http" | "mcp" | "n8n" {
   return getAppConfig().transport;
 }
 
