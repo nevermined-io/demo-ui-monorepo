@@ -18,6 +18,7 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        hoverGreen: "#2EACA7",
         limeCustom: "#D7F771",
         mintCustom: "#B0E4D0",
         nvmGreen: "#0D3F48",

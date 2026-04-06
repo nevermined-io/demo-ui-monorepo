@@ -1,6 +1,6 @@
 import { CircleHelp } from "lucide-react"
 import { Badge } from "./ui/badge"
-import { Button } from "./ui/button"
+
 import {
   Sheet,
   SheetContent,
@@ -16,6 +16,7 @@ import {
   TooltipTrigger,
 } from "./ui/tooltip"
 import { CodeBlock } from "./code-block"
+import { useState } from "react"
 
 const badges = [
   {
@@ -139,6 +140,7 @@ if (needsApiKey || insufficientCredits) {
 ]
 
 const McpAgent = () => {
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
   return (
     <div className="p-12">
       <div className="mb-4 flex justify-between items-center">
@@ -179,39 +181,60 @@ const McpAgent = () => {
         <h3 className="text-lg font-semibold mt-4 mb-2">Step-by-step flow</h3>
         <ol className="space-y-1 text-sm">
           {steps.map(({ text, image, desc, sampleCode }, index) => (
-            <li key={index} className="flex items-center">
+            <li
+              key={index}
+              className={`flex items-center ${
+                hoveredIndex === index ? "text-hoverGreen" : "text-black"
+              }`}
+              onMouseEnter={() => setHoveredIndex(index)}
+              onMouseLeave={() => setHoveredIndex(null)}
+            >
               <span>
                 <span className="font-medium">{index + 1}.</span> {text}
               </span>
 
-              <Sheet>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <CircleHelp className="h-4 w-4" />
-                  </Button>
-                </SheetTrigger>
-                <SheetContent style={{ minWidth: "440px", overflowY: "auto" }}>
-                  <SheetHeader>
-                    <SheetTitle className="text-nvmGreen">
-                      Step {index + 1}
-                    </SheetTitle>
-                    <SheetDescription className="bg-nvmGreen text-white px-4 py-2 mt-4 rounded-md text-sm">
-                      {text}
-                    </SheetDescription>
-                  </SheetHeader>
-                  {image && (
-                    <div className="mt-4">
-                      <img
-                        src={image}
-                        alt={`Step ${index + 1}`}
-                        className="rounded-lg"
-                      />
+              <TooltipProvider>
+                <Sheet>
+                  <SheetTrigger asChild>
+                    <div>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="ml-2 cursor-pointer">
+                            <CircleHelp className="h-4 w-4" />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent className="bg-nvmGreen text-white">
+                          <p>Click for more info</p>
+                        </TooltipContent>
+                      </Tooltip>
                     </div>
-                  )}
-                  <p className="mt-4 text-sm">{desc}</p>
-                  {sampleCode && <CodeBlock code={sampleCode} />}
-                </SheetContent>
-              </Sheet>
+                  </SheetTrigger>
+
+                  <SheetContent
+                    style={{ minWidth: "440px", overflowY: "auto" }}
+                  >
+                    <SheetHeader>
+                      <SheetTitle className="text-nvmGreen">
+                        Step {index + 1}
+                      </SheetTitle>
+                      <SheetDescription className="bg-nvmGreen text-white px-4 py-2 mt-4 rounded-md text-sm">
+                        {text}
+                      </SheetDescription>
+                    </SheetHeader>
+                    {image && (
+                      <div className="mt-4">
+                        <img
+                          src={image}
+                          alt={`Step ${index + 1}`}
+                          className="rounded-lg"
+                        />
+                      </div>
+                    )}
+                    <p className="mt-4 text-sm">{desc}</p>
+                    {sampleCode && <CodeBlock code={sampleCode} />}
+                  </SheetContent>
+                </Sheet>
+              </TooltipProvider>
             </li>
           ))}
         </ol>
