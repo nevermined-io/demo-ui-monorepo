@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.7
 
 # --- Builder stage: install deps and build client + server ---
-    FROM --platform=linux/amd64 node:20-alpine AS builder
+    FROM --platform=linux/amd64 node:24-alpine AS builder
     WORKDIR /app
 
     # Install dependencies needed for native modules
@@ -54,7 +54,7 @@
     RUN yarn build:packages && yarn build:apps
     
     # --- Runtime stage: run the production server ---
-    FROM --platform=linux/amd64 node:20-alpine AS runner
+    FROM --platform=linux/amd64 node:24-alpine AS runner
     WORKDIR /app
     ENV NODE_ENV=production
 
